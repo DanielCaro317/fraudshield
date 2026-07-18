@@ -9,6 +9,20 @@
 
 ---
 
+## 🖱️ / ⌨️ Cómo leer este manual (RAG es código, pero lo hacemos amable)
+
+Seré honesto contigo, porque es importante: **un RAG se construye con código.** No existe un botón "arma mi RAG" — y precisamente *por eso* Proxify lo evalúa: es la habilidad central del rol. La buena noticia: lo hacemos lo más visual y guiado posible.
+
+- 🖱️ **Corre el código en un notebook (recomendado para semi-junior).** En vez de lanzar scripts a ciegas en la terminal, abre un **notebook Jupyter en VS Code** (extensión Jupyter) y pega cada bloque en una celda. Ejecutas con **Shift+Enter** y **ves el resultado de cada paso** (los chunks, las quejas recuperadas, la respuesta del LLM). Es la forma más intuitiva de *entender* lo que pasa.
+- 🖱️ **Hay partes con UI real:** exportar las quejas (consola de BigQuery / Cloud Storage), y el **dashboard de Langfuse** (observabilidad, §12) que es 100% visual.
+- ⌨️ **Terminal:** también puedes guardar cada bloque como un `.py` y correrlo con `python archivo.py`. Te doy los nombres de archivo por si prefieres esa vía.
+
+> 💡 **¿Existe un RAG "sin código"?** Sí: **Vertex AI Search** (antes "Agent Builder / Enterprise Search") arma un RAG gestionado subiendo documentos por consola, casi sin programar. Es una alternativa válida para un producto rápido — pero **no te enseña las piezas** (chunking, embeddings, hybrid, re-ranking, evaluación) que te van a preguntar en la entrevista. Por eso aquí lo construimos a mano. Menciona Vertex AI Search como "la opción gestionada" y sabrás de qué hablas.
+
+👉 **Plan sugerido:** haz todo el manual en un notebook, celda por celda. Cuando funcione, guarda los scripts `.py` para el repo (los usarás en la API del Manual 06).
+
+---
+
 ## 📋 Tabla de contenido
 
 1. [Conceptos previos](#1-conceptos-previos)
@@ -84,7 +98,7 @@ Memoriza este diagrama — **te lo van a pedir dibujar en la entrevista de Proxi
 
 ## 3. Entorno
 
-> Trabajaremos en **tu PC local** (no Cloud Shell): tu RTX 4070 Super corre el LLM y los embeddings **gratis** con Ollama, y es mucho más rápido. Abre una terminal (PowerShell) en tu PC.
+> Trabajaremos en **tu PC local** (no Cloud Shell): tu RTX 4070 Super corre el LLM y los embeddings **gratis** con Ollama, y es mucho más rápido. Abre una terminal (PowerShell) en tu PC, o el terminal integrado de VS Code.
 
 ### 3.1 — Verificar Ollama (lo instalaste en el Manual 00 Parte B)
 ```powershell
@@ -109,8 +123,11 @@ python -m venv .venv
 ### 3.3 — Instalar dependencias
 ```powershell
 pip install langchain langchain-community langchain-ollama langchain-chroma langchain-text-splitters chromadb rank_bm25 sentence-transformers pandas
+pip install jupyter ipykernel   # para trabajar en notebook dentro de VS Code
 ```
 💡 (RAGAS y Langfuse los instalamos en sus pasos para no demorar esto.)
+
+🖱️ **Para el modo notebook:** en VS Code, instala la extensión **Jupyter**, crea un archivo `rag/explorar.ipynb`, y arriba a la derecha elige el kernel de tu `.venv`. Cada bloque de código de este manual va en una celda.
 
 ### ✅ Checkpoint 3
 `ollama list` muestra los 2 modelos; el entorno virtual está activo (verás `(.venv)` en el prompt); las librerías instalaron sin error.
@@ -121,27 +138,27 @@ pip install langchain langchain-community langchain-ollama langchain-chroma lang
 
 Las quejas están en BigQuery (`fraud_raw.complaints`). Las exportamos a un CSV y lo bajamos a tu PC.
 
-### 4.1 — Exportar (en Cloud Shell)
+🖱️ **Por la UI (consola):**
+1. **BigQuery** → editor → RUN:
+   ```sql
+   CREATE OR REPLACE TABLE `fraud_dbt.complaints_sample` AS
+   SELECT * FROM `fraud_raw.complaints` LIMIT 3000;
+   ```
+2. Explorer → tabla `complaints_sample` → **⋮ → Export → Export to GCS** → `.../curated/complaints_sample.csv` (CSV).
+3. **Cloud Storage** → tu bucket → `curated/` → clic en `complaints_sample.csv` → **DOWNLOAD**. Guárdalo en `fraudshield\rag\`.
+
+⌨️ **Equivalente en CLI (Cloud Shell):**
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export BUCKET="gs://${PROJECT_ID}-datalake"
-
-# Tomamos hasta 3000 quejas (suficiente para un RAG ágil y de calidad)
 bq query --use_legacy_sql=false --replace \
   --destination_table=fraud_dbt.complaints_sample \
   'SELECT * FROM `fraud_raw.complaints` LIMIT 3000'
-
 bq extract --destination_format=CSV \
-  fraud_dbt.complaints_sample \
-  "$BUCKET/curated/complaints_sample.csv"
-
+  fraud_dbt.complaints_sample "$BUCKET/curated/complaints_sample.csv"
 gcloud storage cp "$BUCKET/curated/complaints_sample.csv" ~/
+# luego: Cloud Shell menú ⋮ → Download → complaints_sample.csv
 ```
-
-### 4.2 — Descargar a tu PC
-En Cloud Shell: menú **⋮ (tres puntos)** → **Download** → escribe `complaints_sample.csv`. Guárdalo en tu PC dentro de `fraudshield\rag\`.
-
-🛟 Alternativa: descárgalo desde la consola web → **Cloud Storage** → tu bucket → `curated/complaints_sample.csv` → **Download**.
 
 ### ✅ Checkpoint 4
 Tienes `fraudshield\rag\complaints_sample.csv` en tu PC.
@@ -150,7 +167,7 @@ Tienes `fraudshield\rag\complaints_sample.csv` en tu PC.
 
 ## 5. Chunking
 
-Crea `rag\ingest.py`:
+En una celda de notebook, o como `rag\ingest.py`:
 ```python
 """Carga las quejas, las parte en chunks y prepara los documentos."""
 import pandas as pd
@@ -186,21 +203,18 @@ with open("chunks.pkl", "wb") as f:
     pickle.dump(chunks, f)
 print("Chunks guardados en chunks.pkl")
 ```
-Ejecuta:
-```powershell
-python ingest.py
-```
+Ejecuta la celda (o `python ingest.py`).
 
 💡 **Por qué chunk_size=800/overlap=100:** las narrativas de quejas son medianas; 800 caracteres captura un evento completo, y el solape evita cortar ideas a la mitad. **El chunking es una decisión de diseño** que afecta la calidad (tema de entrevista).
 
 ### ✅ Checkpoint 5
-`python ingest.py` imprime el nº de chunks y crea `chunks.pkl`.
+Imprime el nº de chunks y crea `chunks.pkl`.
 
 ---
 
 ## 6. Embeddings
 
-Crea `rag\index.py`:
+Celda de notebook, o `rag\index.py`:
 ```python
 """Genera embeddings de los chunks y los indexa en ChromaDB."""
 import pickle
@@ -222,20 +236,16 @@ db = Chroma.from_documents(
 )
 print(f"Indexados {len(chunks)} chunks en ./chroma_db")
 ```
-Ejecuta:
-```powershell
-python index.py
-```
 💡 La primera vez tarda según el nº de chunks (tu GPU lo acelera). Crea la carpeta `chroma_db/` (la base vectorial persistente).
 
 ### ✅ Checkpoint 6
-Existe la carpeta `rag\chroma_db\` y el script imprime cuántos chunks indexó.
+Existe la carpeta `rag\chroma_db\` y el código imprime cuántos chunks indexó.
 
 ---
 
 ## 7. Retrieval
 
-Probemos la **búsqueda semántica** sola (sin LLM todavía). Crea `rag\test_retrieval.py`:
+Probemos la **búsqueda semántica** sola (sin LLM todavía). Celda o `rag\test_retrieval.py`:
 ```python
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
@@ -250,10 +260,6 @@ print(f"Top 4 quejas para: '{query}'\n")
 for d in results:
     print(f"[{d.metadata.get('id')}] {d.page_content[:200]}...\n")
 ```
-Ejecuta:
-```powershell
-python test_retrieval.py
-```
 💡 Nota que encuentra quejas **por significado** aunque no contengan las palabras exactas. Eso es búsqueda semántica.
 
 ### ✅ Checkpoint 7
@@ -263,7 +269,7 @@ El retrieval devuelve quejas relevantes a la consulta.
 
 ## 8. Generacion
 
-Ahora el RAG completo: recuperar + **generar** una respuesta fundamentada con citas. Crea `rag\rag.py`:
+Ahora el RAG completo: recuperar + **generar** una respuesta fundamentada con citas. `rag\rag.py`:
 ```python
 """RAG completo: retrieval + generación con LLM local, respuesta con citas."""
 from langchain_ollama import OllamaEmbeddings, ChatOllama
@@ -313,11 +319,7 @@ if __name__ == "__main__":
         print("\nFuentes:", [d.metadata.get("id") for d in docs])
         print("-" * 70)
 ```
-Ejecuta:
-```powershell
-python rag.py
-```
-🎉 ¡Tu RAG responde preguntas sobre las quejas, **con citas a las fuentes**!
+Ejecuta (`python rag.py` o pega la función `ask` en el notebook y llámala). 🎉 ¡Tu RAG responde preguntas sobre las quejas, **con citas a las fuentes**!
 
 🔁 **Usar Claude en vez de Ollama (calidad producción):** instala `pip install langchain-anthropic`, define tu API key (`$env:ANTHROPIC_API_KEY="..."`) y cambia el LLM:
 ```python
@@ -327,7 +329,7 @@ llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
 💡 Para **desarrollar** usa Ollama (gratis); para la **demo/entrevista** puedes mostrar Claude (más potente). El job de Proxify nombra explícitamente Anthropic.
 
 ### ✅ Checkpoint 8
-`python rag.py` responde las 3 preguntas con citas. Tienes un RAG funcional. 🏆
+El RAG responde las 3 preguntas con citas. Tienes un RAG funcional. 🏆
 
 ---
 
@@ -336,7 +338,7 @@ llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0)
 > 🆕 **Delta Proxify (tu gap):** un RAG básico (solo embeddings) no es nivel senior. Lo elevamos con **hybrid search** y **re-ranking** — exactamente lo que te diferencia.
 
 ### 9.1 — Hybrid search (denso + BM25)
-Combinamos búsqueda **semántica** (embeddings) con **palabra clave** (BM25). Crea `rag\retrieval_avanzado.py`:
+Combinamos búsqueda **semántica** (embeddings) con **palabra clave** (BM25). `rag\retrieval_avanzado.py`:
 ```python
 """Retrieval avanzado: hybrid search (denso + BM25) + re-ranking."""
 import pickle
@@ -374,10 +376,6 @@ if __name__ == "__main__":
     q = "transferencias fraudulentas que vaciaron la cuenta"
     for d in retrieve_rerank(q):
         print(f"[{d.metadata.get('id')}] {d.page_content[:160]}...\n")
-```
-Ejecuta:
-```powershell
-python retrieval_avanzado.py
 ```
 💡 **Por qué mejora (guion de entrevista):**
 - **Hybrid:** el denso entiende significado pero puede perder términos exactos (un nombre, un código); BM25 los captura. Juntos suben el **recall** del retrieval.
@@ -434,7 +432,7 @@ pip install ragas datasets
 ```
 
 ### 11.2 — Crear el set de evaluación y correr RAGAS
-Crea `rag\evaluate_rag.py`:
+`rag\evaluate_rag.py`:
 ```python
 """Evalúa el RAG con RAGAS (faithfulness, relevancy, context precision/recall)."""
 from datasets import Dataset
@@ -475,11 +473,7 @@ result = evaluate(
 )
 print(result)
 ```
-Ejecuta:
-```powershell
-python evaluate_rag.py
-```
-Verás un puntaje por métrica (0–1). 
+Verás un puntaje por métrica (0–1).
 
 💡 **Iteración guiada por datos:** cambia algo (chunk_size, k, hybrid vs solo denso, el prompt) y vuelve a correr RAGAS. Si `faithfulness` o `context_precision` suben, la mejora es real — **no a ojo**. Eso es *eval-driven development* (y en el Manual 06 lo pondremos en CI como **eval-gate**).
 
@@ -492,11 +486,11 @@ Verás un puntaje por métrica (0–1).
 
 ## 12. Tracing
 
-> 🆕 **Delta Proxify:** en producción necesitas **ver** qué hace tu RAG (prompts, contexto, latencia, costo) para depurar. Eso es **observabilidad de LLM**.
+> 🆕 **Delta Proxify:** en producción necesitas **ver** qué hace tu RAG (prompts, contexto, latencia, costo) para depurar. Eso es **observabilidad de LLM**. Esta es una parte **muy visual** (dashboard web).
 
 📖 **Langfuse / LangSmith:** plataformas para **trazar** cada llamada (qué se recuperó, qué prompt se envió, qué respondió, cuántos tokens, cuánto tardó).
 
-### 12.1 — Opción rápida (Langfuse cloud, free tier)
+### 12.1 — Opción rápida (Langfuse cloud, free tier) 🖱️
 1. Crea cuenta en **https://cloud.langfuse.com** → proyecto → copia `PUBLIC_KEY` y `SECRET_KEY`.
 2. Instala y configura:
 ```powershell
@@ -511,14 +505,14 @@ from langfuse.langchain import CallbackHandler
 handler = CallbackHandler()
 answer = llm.invoke(messages, config={"callbacks": [handler]}).content
 ```
-4. Abre el dashboard de Langfuse → verás cada consulta trazada (prompt, contexto, latencia, tokens).
+4. 🖱️ Abre el **dashboard de Langfuse** en el navegador → verás cada consulta trazada (prompt, contexto, latencia, tokens) en una interfaz visual. Toma una captura para el portafolio. 📸
 
 💡 Es **opcional** para que tu RAG funcione, pero **muy valorado** en Proxify: "instrumento mis cadenas con Langfuse para depurar y monitorear costo/latencia en producción".
 
 🛟 La API de integración de Langfuse cambia entre versiones; si el import falla, revisa su doc para tu versión. Es opcional, no bloquea el resto.
 
 ### ✅ Checkpoint 12 (opcional)
-Ves al menos una traza de tu RAG en Langfuse.
+Ves al menos una traza de tu RAG en el dashboard de Langfuse.
 
 ---
 
@@ -530,6 +524,7 @@ Para el portafolio/entrevista, ten claro cómo escala esto **fuera de tu PC**:
 |---|---|---|---|
 | Embeddings/LLM | Ollama | **Vertex AI** / Claude API | **Bedrock** |
 | Vector DB | ChromaDB | **pgvector** (Cloud SQL) o **Vertex AI Vector Search** | **OpenSearch** / Bedrock Knowledge Bases |
+| RAG gestionado (no-code) | — | **Vertex AI Search** | **Bedrock Knowledge Bases** |
 | Tracing | Langfuse cloud | Langfuse self-host / Cloud Logging | Langfuse / CloudWatch |
 
 💡 **Migrar ChromaDB → pgvector** es directo: cambias el `vectorstore` de LangChain (`langchain_postgres.PGVector`) apuntando a una base Postgres con la extensión `pgvector`. La lógica del RAG no cambia. (Lo conectaremos al desplegar, Manuales 06–07.)
@@ -544,16 +539,17 @@ Puedes explicar cómo llevarías este RAG a producción en GCP y su equivalente 
 ## 14. Commit
 
 ⚠️ No subas la base vectorial ni los datos (pesados). Sube el **código**.
-```powershell
-cd ..    # a la raíz del repo fraudshield
-```
-Añade al `.gitignore` (desde Cloud Shell o local):
+
+🖱️ **Por la UI (VS Code):** Source Control → commit → push (con el `.gitignore` de abajo).
+
+⌨️ **Por CLI:** añade al `.gitignore`:
 ```
 # RAG
 rag/.venv/
 rag/chroma_db/
 rag/*.pkl
 rag/*.csv
+rag/*.ipynb_checkpoints
 ```
 Luego:
 ```powershell
@@ -569,16 +565,16 @@ En GitHub aparecen los scripts del RAG (sin datos ni base vectorial).
 
 ## 15. Checklist
 
-- [ ] Entorno local con Ollama (LLM + embeddings) y venv funcionando.
+- [ ] Entorno local con Ollama (LLM + embeddings) y venv/notebook funcionando.
 - [ ] Quejas exportadas de BigQuery a tu PC.
-- [ ] Chunking (`ingest.py`) e indexación en ChromaDB (`index.py`).
+- [ ] Chunking e indexación en ChromaDB.
 - [ ] Retrieval semántico probado.
 - [ ] **RAG completo** que responde con citas (`rag.py`).
 - [ ] **Hybrid search + re-ranking** (`retrieval_avanzado.py`).
 - [ ] Técnicas de prompt engineering anti-alucinación aplicadas.
 - [ ] **Evaluación con RAGAS** corriendo y entendida.
-- [ ] (Opcional) Tracing con Langfuse.
-- [ ] Sé explicar la migración a producción (pgvector/Vertex/Bedrock).
+- [ ] (Opcional) Tracing con Langfuse (dashboard visto).
+- [ ] Sé explicar la migración a producción (pgvector/Vertex/Bedrock/Vertex AI Search).
 - [ ] Puedo **dibujar la arquitectura RAG de memoria**.
 - [ ] Código commiteado.
 
@@ -594,7 +590,7 @@ Si todo está ✅ → **listo para el Manual 05B: Agentes y workflows (LangGraph
 | Embeddings muy lentos | CPU en vez de GPU | Verifica drivers NVIDIA; Ollama usa la GPU automáticamente. |
 | `Activate.ps1` bloqueado | Política de ejecución | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`. |
 | "No encontré columna de narrativa" | Nombres distintos del CSV | Mira `df.columns` impreso y ajusta la detección. |
-| Chroma da resultados raros | Índice viejo | Borra `chroma_db/` y re-corre `index.py`. |
+| Chroma da resultados raros | Índice viejo | Borra `chroma_db/` y re-indexa. |
 | Respuestas inventadas | Prompt poco estricto / mal retrieval | Refuerza grounding; usa hybrid + re-ranking; baja temperatura a 0. |
 | RAGAS falla al importar | Versión distinta | `pip show ragas`; ajusta imports según su doc. |
 | Cross-encoder lento al descargar | Primera vez baja el modelo | Espera; queda cacheado para las próximas. |
@@ -616,7 +612,8 @@ Si todo está ✅ → **listo para el Manual 05B: Agentes y workflows (LangGraph
 - **Alucinación:** respuesta inventada, no fundamentada.
 - **RAGAS:** framework de evaluación de RAG (faithfulness, relevancy, context precision/recall).
 - **Tracing/observabilidad:** registrar y visualizar cada llamada (Langfuse/LangSmith).
-- **pgvector / Vertex Vector Search / Bedrock KB:** vector DB en producción (GCP/AWS).
+- **Vertex AI Search / Bedrock KB:** RAG gestionado (no-code) en GCP / AWS.
+- **pgvector / Vertex Vector Search:** vector DB en producción.
 
 ---
 

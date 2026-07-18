@@ -9,6 +9,18 @@
 
 ---
 
+## 🖱️ / ⌨️ Cómo leer este manual (Airflow es medio y medio)
+
+Airflow tiene una parte de código y una parte muy visual — este manual aprovecha las dos:
+
+- **Definir el DAG = código.** Un DAG *es* un archivo Python. Lo escribes una sola vez en el **editor gráfico** (Open Editor). No hay botón para "dibujar" un pipeline en Airflow open-source.
+- **Operar Airflow = 100% UI.** Una vez creado el DAG, **todo lo demás lo haces con clics** en la **interfaz web de Airflow**: activarlo, dispararlo (▶), ver el progreso (Grid), el flujo (Graph) y los logs. Esto es lo bonito de Airflow.
+- **Cloud Composer (Airflow gestionado) = UI.** Crear el entorno y subir el DAG se puede hacer **por consola** (menú → Composer → Create; y arrastrar el `.py` a la carpeta de DAGs). Te doy ambas.
+
+👉 **Para semi-junior:** escribe el DAG en Open Editor (paso 7), y a partir de ahí trabaja **solo en la web de Airflow**. Los comandos de terminal son casi todos de *instalación* (una vez).
+
+---
+
 ## 📋 Tabla de contenido
 
 1. [Conceptos previos](#1-conceptos-previos)
@@ -18,7 +30,7 @@
 5. [Arrancar Airflow y entrar a la UI](#5-arrancar)
 6. [Anatomía de un DAG](#6-anatomia)
 7. [Construir el DAG del pipeline de fraude](#7-dag)
-8. [Ejecutar y monitorear el DAG](#8-ejecutar)
+8. [Ejecutar y monitorear el DAG (UI)](#8-ejecutar)
 9. [Scheduling, reintentos e idempotencia](#9-scheduling)
 10. [Llevarlo a producción: Cloud Composer (demo)](#10-composer)
 11. [Commit a GitHub](#11-commit)
@@ -32,7 +44,7 @@
 
 📖 **Orquestación:** coordinar automáticamente varias tareas en el orden correcto, con horarios, dependencias, reintentos y monitoreo. Es el "director de orquesta" de tu pipeline.
 
-📖 **Apache Airflow:** la herramienta estándar para orquestar pipelines de datos. Defines tus flujos como **código Python**.
+📖 **Apache Airflow:** la herramienta estándar para orquestar pipelines de datos. Defines tus flujos como **código Python**, pero los **operas desde una interfaz web**.
 
 📖 **DAG (Directed Acyclic Graph):** un "flujo de trabajo". Es un grafo de **tasks** (tareas) conectadas por **dependencias**, sin ciclos (no puede volver atrás). Ej.: `ingesta → transformar → validar`.
 
@@ -79,7 +91,7 @@ Airflow es **pesado** (scheduler + webserver + base de datos). Tienes 3 opciones
 
 ## 4. Instalar
 
-> Trabajaremos en **Cloud Shell**. Recuerda: tu `$HOME` persiste, así que Airflow seguirá ahí entre sesiones.
+> Esta sección es de terminal (instalar Airflow). Son comandos que corres **una sola vez**; luego trabajarás en la web. Recuerda: tu `$HOME` persiste, así que Airflow seguirá ahí entre sesiones.
 
 ### Paso 4.1 — Definir AIRFLOW_HOME
 ```bash
@@ -103,7 +115,7 @@ Tardará 2–4 min. 💡 El `--constraint` fija versiones compatibles de las ~10
 export PATH=$HOME/.local/bin:$PATH
 airflow version
 ```
-Debe imprimir `2.9.3`. 
+Debe imprimir `2.9.3`.
 
 💡 Añade el PATH a tu `.bashrc` para no repetirlo:
 ```bash
@@ -125,7 +137,7 @@ source ~/.bashrc
 
 ## 5. Arrancar
 
-### Paso 5.1 — Iniciar Airflow en modo standalone
+### Paso 5.1 — Iniciar Airflow en modo standalone (terminal)
 `airflow standalone` inicializa la base de datos, crea un usuario admin y arranca scheduler + webserver, todo en un comando:
 ```bash
 airflow standalone
@@ -139,12 +151,14 @@ standalone | Login with username: admin  password: <UNA_CONTRASEÑA>
 
 ⚠️ **Este comando ocupa la terminal** (queda corriendo). No la cierres. Para ejecutar otros comandos, abre **otra pestaña de Cloud Shell** con el botón **"+"**.
 
-### Paso 5.2 — Abrir la UI de Airflow (Web Preview)
+### Paso 5.2 — Abrir la UI de Airflow (Web Preview) 🖱️
 1. En la barra de Cloud Shell, clic en **"Web Preview"** (ícono de pantalla con ojo) → **"Preview on port 8080"**.
 2. Se abre la UI de Airflow. Inicia sesión con **admin** y la contraseña del paso 5.1.
 
+👉 **De aquí en adelante, esta ventana web es tu centro de operaciones.** Casi no volverás a la terminal.
+
 ### ✅ Checkpoint 5
-Ves la interfaz de Airflow en el navegador, sin DAGs de ejemplo (solo aparecerá el nuestro cuando lo creemos). 
+Ves la interfaz de Airflow en el navegador, sin DAGs de ejemplo (solo aparecerá el nuestro cuando lo creemos).
 
 🛟 *Si la UI no abre o va muy lenta / se cae:* Cloud Shell tiene poca RAM. Mira la sección 🛟 (opción de correr en tu PC local). *Si pide otra ruta de puerto:* usa "Change port" → 8080.
 
@@ -165,12 +179,15 @@ Antes de escribir el DAG, entiende sus partes. Un DAG tiene:
 
 ## 7. Dag
 
-Vamos a crear el DAG que orquesta tu pipeline completo.
+Vamos a crear el DAG que orquesta tu pipeline completo. Este es el **único paso de código** del manual.
 
 ### Paso 7.1 — Crear el archivo del DAG
-Crea `~/fraudshield/dags/fraud_pipeline.py`. Usa el editor (Open Editor) o este comando (en la **segunda pestaña** de Cloud Shell):
-```bash
-cat > ~/fraudshield/dags/fraud_pipeline.py << 'EOF'
+
+🖱️ **Por la UI (recomendado):** en **Open Editor** (o VS Code), clic derecho sobre la carpeta `fraudshield/dags` → **New File** → nómbralo `fraud_pipeline.py` → pega el contenido de abajo → **Ctrl+S**.
+
+⌨️ **Por CLI (alternativa, en la segunda pestaña de Cloud Shell):** `cat > ~/fraudshield/dags/fraud_pipeline.py << 'EOF'` … `EOF` con el mismo contenido.
+
+```python
 """
 DAG FraudShield: orquesta el pipeline de datos antifraude.
   extract_load  -> carga datos de Cloud Storage a BigQuery (Manual 01)
@@ -251,11 +268,12 @@ with DAG(
 
     # Dependencias: 1 -> 2 -> 3
     extract_load >> dbt_build >> data_quality
-EOF
 ```
 
-### Paso 7.2 — Que Airflow detecte el DAG
-Airflow escanea la carpeta de DAGs cada ~30 s. Refresca la UI; debe aparecer **`fraud_pipeline`**. Si no, en la segunda pestaña corre:
+> 💡 **Recuerda:** este DAG usa `load_to_bigquery.py` (Manual 01, §10) y el proyecto dbt (Manual 02). Si en el Manual 01 hiciste solo el camino UI, crea igual ese script (está en el §10 del Manual 01) para que la task `extract_load` tenga qué ejecutar.
+
+### Paso 7.2 — Que Airflow detecte el DAG 🖱️
+Airflow escanea la carpeta de DAGs cada ~30 s. **Refresca la UI**; debe aparecer **`fraud_pipeline`**. Si no, en la segunda pestaña corre:
 ```bash
 airflow dags list
 ```
@@ -270,19 +288,21 @@ Debe listar `fraud_pipeline`.
 
 ## 8. Ejecutar
 
-### Paso 8.1 — Activar y disparar el DAG
+> Esta sección es **100% clics en la web de Airflow**. Cero terminal.
+
+### Paso 8.1 — Activar y disparar el DAG 🖱️
 1. En la UI, busca `fraud_pipeline`.
 2. Activa el **toggle** (interruptor) a la izquierda del nombre para "despausarlo".
 3. Clic en el botón **▶ (Trigger DAG)** a la derecha para ejecutarlo manualmente ahora.
 
-### Paso 8.2 — Ver el progreso
+### Paso 8.2 — Ver el progreso 🖱️
 1. Clic en el nombre `fraud_pipeline` → vista **"Grid"** (cuadrícula).
 2. Verás las 3 tasks ejecutándose: verde = éxito, amarillo = corriendo, rojo = falló.
 3. Clic en cualquier cuadro de task → **"Logs"** para ver su salida detallada.
 
 💡 Orden esperado: `extract_load_to_bigquery` (1–3 min) → `dbt_build` (1–2 min) → `data_quality_check` (segundos, imprime "Casos de fraude encontrados: ...").
 
-### Paso 8.3 — Ver el grafo
+### Paso 8.3 — Ver el grafo 🖱️
 Clic en la pestaña **"Graph"**: verás el flujo `extract_load → dbt_build → data_quality`. Esto es tu pipeline orquestado. 🎉
 
 ### ✅ Checkpoint 8
@@ -294,7 +314,7 @@ Las 3 tasks terminan en **verde**. En los logs de `data_quality_check` ves "Vali
 
 ## 9. Scheduling
 
-Conceptos senior que debes poder explicar:
+Conceptos senior que debes poder explicar. Todos se configuran en el archivo del DAG, pero se **observan en la UI** (columnas "Schedule", "Next Run", "Runs").
 
 ### Scheduling (programación)
 - `schedule="@daily"` → corre cada día a medianoche. Otras opciones: `"@hourly"`, `"@weekly"`, o **cron** (`"0 6 * * *"` = 6 AM diario).
@@ -324,16 +344,30 @@ Puedes explicar con tus palabras: schedule, catchup, retries e idempotencia.
 - Tus DAGs viven en un **bucket de Cloud Storage** que Composer vigila; subes el `.py` y aparece en la UI.
 
 ### 10.2 — Crear un entorno (toma ~25 min)
+
+🖱️ **Por la Consola (UI):**
+1. Menú **☰** → **Composer**. (Si pide habilitar la API, acepta.)
+2. Botón **CREATE** → **Composer 3**.
+3. **Name:** `fraudshield-demo`. **Location:** `us-central1`. **Environment size:** *Small*.
+4. Deja el resto por defecto → **CREATE**. Tarda ~25 min (verás un spinner).
+
+⌨️ **Equivalente en CLI:**
 ```bash
 gcloud composer environments create fraudshield-demo \
   --location us-central1 \
   --image-version composer-3-airflow-2 \
   --environment-size small
 ```
-💡 Mientras se crea, ten claro que **a partir de aquí corre el reloj de costos**.
+💡 **A partir de aquí corre el reloj de costos.**
 
 ### 10.3 — Subir el DAG
-Cuando el entorno esté `RUNNING`, sube tu DAG a su carpeta:
+
+🖱️ **Por la Consola (UI):**
+1. En **Composer**, clic en tu entorno `fraudshield-demo`.
+2. Pestaña **DAGs** → botón **OPEN DAGS FOLDER** (te lleva al bucket de Cloud Storage del entorno).
+3. Botón **UPLOAD FILES** → sube `fraud_pipeline.py`. En 1–2 min aparece en la UI de Airflow.
+
+⌨️ **Equivalente en CLI:**
 ```bash
 gcloud composer environments storage dags import \
   --environment fraudshield-demo \
@@ -341,20 +375,17 @@ gcloud composer environments storage dags import \
   --source ~/fraudshield/dags/fraud_pipeline.py
 ```
 
-### 10.4 — Abrir la UI de Composer
-```bash
-gcloud composer environments describe fraudshield-demo \
-  --location us-central1 --format="value(config.airflowUri)"
-```
-Abre esa URL → es la UI de Airflow gestionada. Toma tu **captura para el portafolio** (DAG corriendo en Composer). 📸
+### 10.4 — Abrir la UI de Airflow de Composer 🖱️
+En la página del entorno (Composer → `fraudshield-demo`), clic en el enlace **Airflow UI** (o "Airflow web server"). Se abre la UI gestionada. Toma tu **captura para el portafolio** (DAG corriendo en Composer). 📸
 
 ### 10.5 — ⚠️ APAGAR el entorno (NO lo olvides)
+
+🖱️ **Por la Consola:** Composer → selecciona `fraudshield-demo` → botón **DELETE** → confirma.
+
+⌨️ **Por CLI:**
 ```bash
 gcloud composer environments delete fraudshield-demo --location us-central1
-```
-Confirma con `Y`. Verifica que ya no existe:
-```bash
-gcloud composer environments list --locations us-central1
+gcloud composer environments list --locations us-central1   # verifica que ya no existe
 ```
 
 🔁 **En AWS:** el equivalente es **MWAA**; subes los DAGs a un bucket S3 y AWS administra el Airflow. Mismo concepto, misma habilidad.
@@ -366,19 +397,17 @@ Tienes una captura del DAG en Composer **y confirmaste que el entorno fue elimin
 
 ## 11. Commit
 
-```bash
-cd ~/fraudshield
-git add dags/fraud_pipeline.py
-git commit -m "Manual 03: DAG de Airflow que orquesta ingesta -> dbt -> validacion de calidad"
-git push origin main
-```
+🖱️ **Por la UI (VS Code / Cloud Shell Editor):** Source Control → mensaje → ✓ Commit → Push.
 
-💡 Añade los artefactos locales de Airflow al `.gitignore` (no queremos subir la BD ni logs de Airflow, que viven en `~/airflow`, fuera del repo — así que normalmente no hay nada que ignorar, pero por si copiaste algo):
+⌨️ **Por CLI:**
 ```bash
 cd ~/fraudshield
 printf '\n# Airflow (artefactos locales)\nairflow.db\nairflow.cfg\nlogs/\nstandalone_admin_password.txt\n' >> .gitignore
-git add .gitignore && git commit -m "Ignorar artefactos locales de Airflow" && git push origin main
+git add dags/fraud_pipeline.py .gitignore
+git commit -m "Manual 03: DAG de Airflow que orquesta ingesta -> dbt -> validacion de calidad"
+git push origin main
 ```
+💡 La BD y los logs de Airflow viven en `~/airflow` (fuera del repo), así que normalmente no hay nada pesado que ignorar; el `.gitignore` es por si copiaste algo.
 
 ### ✅ Checkpoint 11
 En GitHub aparece `dags/fraud_pipeline.py`.
@@ -418,7 +447,7 @@ Si todo está ✅ → **listo para el Manual 04: Modelado de ML (detección de f
 ## 14. Glosario
 
 - **Orquestación:** coordinar tareas en orden, con horarios, dependencias y reintentos.
-- **Airflow:** orquestador de pipelines definido en Python.
+- **Airflow:** orquestador de pipelines definido en Python y operado desde una web.
 - **DAG:** grafo dirigido acíclico = un flujo de trabajo.
 - **Task:** una tarea del DAG.
 - **Operator:** plantilla de task (`BashOperator`, `PythonOperator`...).

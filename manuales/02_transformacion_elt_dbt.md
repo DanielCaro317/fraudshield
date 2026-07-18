@@ -9,6 +9,19 @@
 
 ---
 
+## 🖱️ / ⌨️ Cómo leer este manual (una nota honesta sobre dbt)
+
+**dbt es una herramienta de código, no de clics.** No existe un botón "crear modelo": un modelo *es* un archivo `.sql`. Aun así, puedes trabajarlo de forma **mucho más visual** de lo que parece, y así lo enfocamos aquí:
+
+- 🖱️ **Por la UI:** creas y editas los archivos con el **editor gráfico** de Cloud Shell (**"Open Editor"**, idéntico a VS Code) — clic derecho → *New File*, pegas el contenido, guardas con Ctrl+S. Ves los resultados en la **consola de BigQuery**. La documentación se abre como **página web** (Web Preview).
+- ⌨️ **Por CLI:** el mismo archivo creado con un comando `cat >` en la terminal, y un puñado de comandos `dbt ...` para construir/probar. Esos comandos `dbt` **sí o sí** se corren en terminal — pero son 4 o 5, muy simples, y te los explico uno por uno.
+
+> 💡 **¿Quieres una experiencia 100% web?** Existe **dbt Cloud** (plan *Developer* **gratis** para 1 usuario) con un **IDE en el navegador**: escribes los modelos, corres `dbt build` y ves el lineage sin tocar una terminal. Todo el SQL de este manual funciona igual ahí; solo cambia *dónde* escribes los archivos y que le conectas BigQuery con una service account. Si el terminal te agobia, esa es tu ruta. En este manual usamos dbt-core (gratis, en Cloud Shell) porque no depende de otra cuenta.
+
+👉 **Recomendación para semi-junior:** usa el **Open Editor** para todos los archivos (mucho más cómodo que pegar heredocs), y limítate a correr los comandos `dbt` de las secciones 4, 6, 7, 8, 9, 10 y 11.
+
+---
+
 ## 📋 Tabla de contenido
 
 1. [Conceptos previos](#1-conceptos-previos)
@@ -63,21 +76,20 @@ Antes de instalar, ten claro **qué resuelve** dbt (te lo van a preguntar):
 - **Documentación viva:** generas un sitio web navegable de tus datos.
 - **Modularidad:** divides lógica compleja en piezas reutilizables.
 
-> Usaremos **dbt-core** (gratis, open-source, corre en Cloud Shell). Existe dbt Cloud (versión web de pago), pero core cubre todo lo que necesitas.
+> Usaremos **dbt-core** (gratis, open-source, corre en Cloud Shell). Alternativa 100% web: **dbt Cloud** (plan Developer gratis, IDE en el navegador) — ver la nota del inicio.
 
 ---
 
 ## 3. Instalar
 
+> Esta sección es de terminal (instalar y autenticar). Son 3 comandos; luego casi todo lo escribes en el editor visual.
+
 ### Paso 3.1 — Abrir Cloud Shell e instalar dbt-bigquery
 ```bash
 pip install --user dbt-bigquery
-```
-💡 `dbt-bigquery` instala dbt-core + el adaptador de BigQuery. Verifica:
-```bash
 dbt --version
 ```
-Debe mostrar `Core: 1.x` e `installed: bigquery`. Si dice "command not found", usa `python3 -m dbt --version` o añade `export PATH=$PATH:~/.local/bin`.
+💡 `dbt-bigquery` instala dbt-core + el adaptador de BigQuery. Debe mostrar `Core: 1.x` e `installed: bigquery`. Si dice "command not found", usa `python3 -m dbt --version` o añade `export PATH=$PATH:~/.local/bin`.
 
 ### Paso 3.2 — Autenticar dbt con BigQuery
 dbt necesita credenciales para conectarse. Usaremos **OAuth** vía tu sesión de gcloud (lo más simple en Cloud Shell):
@@ -95,10 +107,28 @@ Sigue el enlace/código que aparece y autoriza. Esto crea las "Application Defau
 
 ## 4. Crear proyecto
 
-Construiremos el proyecto dbt **manualmente** dentro de la carpeta `dbt_project/` que ya creaste (así entiendes cada archivo, en vez de usar plantillas automáticas).
+Construiremos el proyecto dbt **manualmente** dentro de la carpeta `dbt_project/` que ya creaste (así entiendes cada archivo, en vez de usar plantillas automáticas). A partir de aquí, **crea cada archivo con el editor visual** (Open Editor → clic derecho → New File) y pega el contenido; el `cat >` es la alternativa por terminal.
 
-### Paso 4.1 — Crear el archivo de conexión (profiles.yml)
-dbt busca las conexiones en `~/.dbt/profiles.yml`. Créalo (reemplaza `<TU_PROJECT_ID>`):
+### Paso 4.1 — Archivo de conexión: `~/.dbt/profiles.yml`
+dbt busca las conexiones en `~/.dbt/profiles.yml` (una carpeta oculta en tu home).
+
+🖱️ **Por la UI:** en Open Editor, menú **File → Open…** escribe la ruta `/home/<tu_usuario>/.dbt/` (créala si no existe), y crea `profiles.yml` con este contenido (cambia `<TU_PROJECT_ID>`):
+```yaml
+fraudshield:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: <TU_PROJECT_ID>
+      dataset: fraud_dbt
+      location: us-central1
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+```
+
+⌨️ **Por CLI (rellena el Project ID automáticamente):**
 ```bash
 mkdir -p ~/.dbt
 export PROJECT_ID=$(gcloud config get-value project)
@@ -117,15 +147,11 @@ fraudshield:
       priority: interactive
 EOF
 ```
-💡 **Qué significa:**
-- `fraudshield` → nombre del "profile" (lo enlazaremos en el proyecto).
-- `dataset: fraud_dbt` → dbt creará sus modelos en un dataset nuevo llamado `fraud_dbt` (separado del crudo `fraud_raw`).
-- `method: oauth` → usa las credenciales que generaste en el paso 3.2.
-- `threads: 4` → construye hasta 4 modelos en paralelo.
+💡 **Qué significa:** `fraudshield` = nombre del "profile"; `dataset: fraud_dbt` = dbt creará sus modelos en un dataset nuevo (separado del crudo `fraud_raw`); `method: oauth` = usa las credenciales del paso 3.2; `threads: 4` = construye hasta 4 modelos en paralelo.
 
-### Paso 4.2 — Crear el archivo del proyecto (dbt_project.yml)
-```bash
-cat > ~/fraudshield/dbt_project/dbt_project.yml << 'EOF'
+### Paso 4.2 — Archivo del proyecto: `dbt_project/dbt_project.yml`
+Crea `~/fraudshield/dbt_project/dbt_project.yml` (por editor o `cat >`):
+```yaml
 name: 'fraudshield'
 version: '1.0.0'
 config-version: 2
@@ -145,23 +171,26 @@ models:
       +materialized: view
     marts:
       +materialized: table
-EOF
 ```
 
 ### Paso 4.3 — Crear las carpetas de modelos
+
+🖱️ **Por la UI:** en Open Editor, clic derecho sobre `dbt_project` → New Folder → crea `models`, y dentro de `models` crea `staging`, `intermediate`, `marts`. Crea también `tests` al nivel de `dbt_project`.
+
+⌨️ **Por CLI:**
 ```bash
 cd ~/fraudshield/dbt_project
 mkdir -p models/staging models/intermediate models/marts tests
 ```
 
-### Paso 4.4 — Verificar la conexión
+### Paso 4.4 — Verificar la conexión (terminal)
 ```bash
 cd ~/fraudshield/dbt_project
 dbt debug
 ```
 Busca la línea final: **`All checks passed!`** 🎉
 
-🛟 *Si falla "profile not found":* revisa que `name`/`profile` en `dbt_project.yml` digan `fraudshield` y que `~/.dbt/profiles.yml` exista. *Si falla auth:* repite paso 3.2.
+🛟 *Si falla "profile not found":* revisa que `profile:` en `dbt_project.yml` diga `fraudshield` y que `~/.dbt/profiles.yml` exista. *Si falla auth:* repite paso 3.2.
 
 ### ✅ Checkpoint 4
 `dbt debug` → "All checks passed!".
@@ -172,9 +201,8 @@ Busca la línea final: **`All checks passed!`** 🎉
 
 📖 **Sources:** le dicen a dbt cuáles son tus tablas crudas de entrada (las del Manual 01). Permiten usar `{{ source(...) }}` y testear los datos de origen.
 
-### Paso 5.1 — Declarar las fuentes
-```bash
-cat > ~/fraudshield/dbt_project/models/staging/_sources.yml << 'EOF'
+Crea `~/fraudshield/dbt_project/models/staging/_sources.yml` (editor o `cat >`):
+```yaml
 version: 2
 
 sources:
@@ -186,7 +214,6 @@ sources:
         description: "Transacciones bancarias (PaySim). ~6.3M filas."
       - name: complaints
         description: "Quejas de clientes con narrativa (CFPB)."
-EOF
 ```
 
 ### ✅ Checkpoint 5
@@ -198,9 +225,8 @@ El archivo `models/staging/_sources.yml` existe.
 
 📖 La capa **staging** hace limpieza ligera: renombra columnas a nombres claros, asegura tipos, **sin lógica de negocio**. Un modelo por tabla fuente.
 
-### Paso 6.1 — stg_transactions
-```bash
-cat > ~/fraudshield/dbt_project/models/staging/stg_transactions.sql << 'EOF'
+### Paso 6.1 — `models/staging/stg_transactions.sql`
+```sql
 -- Limpieza y normalización de las transacciones crudas.
 with source as (
     select * from {{ source('fraud_raw', 'transactions') }}
@@ -224,14 +250,13 @@ renamed as (
 )
 
 select * from renamed
-EOF
 ```
 
-### Paso 6.2 — stg_complaints
-```bash
-cat > ~/fraudshield/dbt_project/models/staging/stg_complaints.sql << 'EOF'
+### Paso 6.2 — `models/staging/stg_complaints.sql`
+```sql
 -- Limpieza de las quejas de clientes (texto no estructurado).
--- Nota: ajusta los nombres de columna si tu carga difiere (revisa con `bq show fraud_raw.complaints`).
+-- Nota: ajusta los nombres de columna si tu carga difiere (revisa en la consola de BigQuery
+-- el esquema de fraud_raw.complaints).
 with source as (
     select * from {{ source('fraud_raw', 'complaints') }}
 )
@@ -239,19 +264,20 @@ with source as (
 select
     *
 from source
-EOF
 ```
 💡 Dejamos `stg_complaints` simple; lo usará el RAG (Manual 05). Si quieres, más adelante seleccionas solo las columnas relevantes (fecha, producto, issue, narrativa).
 
-### Paso 6.3 — Probar la capa staging
+### Paso 6.3 — Construir la capa staging (terminal)
 ```bash
 cd ~/fraudshield/dbt_project
 dbt run --select staging
 ```
 Salida esperada: `Completed successfully`, con 2 modelos creados como **vistas** en el dataset `fraud_dbt`.
 
+🖱️ **Verifica en la UI:** consola → **BigQuery** → expande `fraud_dbt` → deben aparecer las vistas `stg_transactions` y `stg_complaints`. Clic en una → pestaña **PREVIEW** para ver datos.
+
 ### ✅ Checkpoint 6
-En BigQuery (consola → `fraud_dbt`) aparecen las vistas `stg_transactions` y `stg_complaints`.
+En BigQuery aparecen las vistas `stg_transactions` y `stg_complaints`.
 
 ---
 
@@ -259,9 +285,8 @@ En BigQuery (consola → `fraud_dbt`) aparecen las vistas `stg_transactions` y `
 
 Aquí está el **corazón del feature engineering de fraude**. Calculamos señales que distinguen transacciones fraudulentas, usando **window functions**.
 
-### Paso 7.1 — int_account_activity
-```bash
-cat > ~/fraudshield/dbt_project/models/intermediate/int_account_activity.sql << 'EOF'
+### Paso 7.1 — `models/intermediate/int_account_activity.sql`
+```sql
 -- Features de fraude por transacción, con contexto de comportamiento de la cuenta.
 with tx as (
     select * from {{ ref('stg_transactions') }}
@@ -302,22 +327,20 @@ features as (
 )
 
 select * from features
-EOF
 ```
 💡 **Por qué estas features:** en PaySim el fraude casi siempre **vacía la cuenta** (`drained_account_flag`) y produce **errores de saldo**. La **velocidad** y el **tiempo entre transacciones** capturan comportamiento anómalo. Esto es exactamente lo que explicarías en entrevista sobre feature engineering de fraude.
 
-### Paso 7.2 — Probar
+### Paso 7.2 — Construir (terminal)
 ```bash
 dbt run --select intermediate
 ```
 
 ### ✅ Checkpoint 7
-La vista `int_account_activity` existe en `fraud_dbt`. Pruébala:
-```bash
-bq query --use_legacy_sql=false \
-'SELECT account_orig, step, amount, balance_error_orig, tx_count_orig, drained_account_flag, is_fraud
- FROM `fraud_dbt.int_account_activity`
- WHERE is_fraud = 1 LIMIT 10'
+La vista `int_account_activity` existe en `fraud_dbt`. Pruébala en el **editor de BigQuery** (Compose new query → RUN):
+```sql
+SELECT account_orig, step, amount, balance_error_orig, tx_count_orig, drained_account_flag, is_fraud
+FROM `fraud_dbt.int_account_activity`
+WHERE is_fraud = 1 LIMIT 10;
 ```
 
 ---
@@ -326,9 +349,8 @@ bq query --use_legacy_sql=false \
 
 La capa **marts** produce la tabla final, materializada como **tabla física** (rápida para que el modelo de ML la lea muchas veces).
 
-### Paso 8.1 — mart_fraud_features
-```bash
-cat > ~/fraudshield/dbt_project/models/marts/mart_fraud_features.sql << 'EOF'
+### Paso 8.1 — `models/marts/mart_fraud_features.sql`
+```sql
 -- Tabla final de features lista para entrenar el modelo de fraude (Manual 04).
 with f as (
     select * from {{ ref('int_account_activity') }}
@@ -365,15 +387,14 @@ from (
         case when transaction_type in ('TRANSFER', 'CASH_OUT') then 1 else 0 end as is_high_risk_type
     from f
 )
-EOF
 ```
 💡 `is_high_risk_type` codifica que el fraude en PaySim **solo** ocurre en `TRANSFER` y `CASH_OUT` — una feature potentísima.
 
-### Paso 8.2 — Construir el mart
+### Paso 8.2 — Construir el mart (terminal)
 ```bash
 dbt run --select marts
 ```
-Esto crea la **tabla** `fraud_dbt.mart_fraud_features`. Verifica:
+Esto crea la **tabla** `fraud_dbt.mart_fraud_features`. 🖱️ Verifícalo en la consola de BigQuery, o por CLI:
 ```bash
 bq query --use_legacy_sql=false \
 'SELECT COUNT(*) AS filas, SUM(is_fraud) AS fraudes FROM `fraud_dbt.mart_fraud_features`'
@@ -390,9 +411,8 @@ bq query --use_legacy_sql=false \
 - **Genéricos:** se declaran en YAML (`not_null`, `unique`, `accepted_values`, `relationships`).
 - **Singulares:** una consulta SQL en `tests/` que **falla si devuelve filas**.
 
-### Paso 9.1 — Tests genéricos (en YAML)
-```bash
-cat > ~/fraudshield/dbt_project/models/marts/_models.yml << 'EOF'
+### Paso 9.1 — Tests genéricos: `models/marts/_models.yml`
+```yaml
 version: 2
 
 models:
@@ -427,21 +447,18 @@ models:
           - not_null
           - accepted_values:
               values: ['CASH_IN', 'CASH_OUT', 'DEBIT', 'PAYMENT', 'TRANSFER']
-EOF
 ```
 
-### Paso 9.2 — Test singular (calidad personalizada)
+### Paso 9.2 — Test singular: `tests/assert_no_negative_amounts.sql`
 Un test que verifica que **no existan montos negativos** (no deberían):
-```bash
-cat > ~/fraudshield/dbt_project/tests/assert_no_negative_amounts.sql << 'EOF'
+```sql
 -- Falla si hay montos negativos (calidad de datos).
 select *
 from {{ ref('stg_transactions') }}
 where amount < 0
-EOF
 ```
 
-### Paso 9.3 — Correr los tests
+### Paso 9.3 — Correr los tests (terminal)
 ```bash
 cd ~/fraudshield/dbt_project
 dbt test
@@ -459,22 +476,18 @@ Salida esperada: todos `PASS`. 🎉
 
 ## 10. Docs
 
-📖 dbt genera un **sitio web navegable** con la documentación y el **lineage** (grafo de dependencias entre modelos). Es oro para mostrar en entrevista.
+📖 dbt genera un **sitio web navegable** con la documentación y el **lineage** (grafo de dependencias entre modelos). Es oro para mostrar en entrevista, y es **100% visual**.
 
-### Paso 10.1 — Generar la documentación
+### Paso 10.1 — Generar y servir la documentación (terminal → web)
 ```bash
 cd ~/fraudshield/dbt_project
 dbt docs generate
-```
-
-### Paso 10.2 — Servir el sitio (con Web Preview de Cloud Shell)
-```bash
 dbt docs serve --port 8080
 ```
-Luego, en la barra de Cloud Shell, clic en **"Web Preview"** (ícono de ojo/pantalla) → **"Preview on port 8080"**. Se abre el sitio de dbt.
 
+🖱️ **Ábrelo en el navegador:** en la barra de Cloud Shell, clic en **"Web Preview"** (ícono de pantalla, arriba a la derecha del panel) → **"Preview on port 8080"**. Se abre el sitio de dbt.
 - Explora los modelos, sus descripciones y columnas.
-- Clic en el botón inferior derecho del **lineage graph** → verás:
+- Clic en el botón inferior derecho del **lineage graph** → verás la cadena:
   `source.transactions → stg_transactions → int_account_activity → mart_fraud_features`
 
 Para detener el servidor: `Ctrl + C` en la terminal.
@@ -503,18 +516,17 @@ Verás cada modelo construirse y testearse en orden. Al final: resumen con todo 
 
 ## 12. Commit
 
-```bash
-cd ~/fraudshield
-git add dbt_project/
-git commit -m "Manual 02: proyecto dbt (ELT) con staging/intermediate/marts, features de fraude y tests de calidad"
-git push origin main
-```
-💡 **No se sube** `~/.dbt/profiles.yml` (está fuera del repo) ni el directorio `target/` de dbt. Añádelo a `.gitignore` por si acaso:
+🖱️ **Por la UI (VS Code / Cloud Shell Editor):** panel Source Control → mensaje → ✓ Commit → Push. Antes, asegúrate de ignorar los artefactos de dbt (abajo).
+
+⌨️ **Por CLI:**
 ```bash
 cd ~/fraudshield
 printf '\n# dbt\ndbt_project/target/\ndbt_project/dbt_packages/\ndbt_project/logs/\n' >> .gitignore
-git add .gitignore && git commit -m "Ignorar artefactos de dbt" && git push origin main
+git add dbt_project/ .gitignore
+git commit -m "Manual 02: proyecto dbt (ELT) con staging/intermediate/marts, features de fraude y tests de calidad"
+git push origin main
 ```
+💡 **No se sube** `~/.dbt/profiles.yml` (está fuera del repo) ni el directorio `target/` de dbt.
 
 ### ✅ Checkpoint 12
 En GitHub aparece la carpeta `dbt_project/` con tus modelos y tests.
@@ -547,7 +559,7 @@ Si todo está ✅ → **listo para el Manual 03: Orquestación con Airflow (Clou
 | "Profile fraudshield not found" | Nombre no coincide | `profile:` en `dbt_project.yml` debe ser `fraudshield` y existir en `~/.dbt/profiles.yml`. |
 | "Dataset not found: fraud_raw" | Región o nombre | Confirma que el Manual 01 creó `fraud_raw` en `us-central1`; `location` del profile debe ser `us-central1`. |
 | `accepted_values` falla en `transaction_type` | Valores distintos | `SELECT DISTINCT transaction_type ...` y ajusta la lista. |
-| Columnas no existen en `stg_complaints` | El CSV de CFPB tenía otros nombres | Revisa `bq show fraud_raw.complaints` y ajusta el SELECT. |
+| Columnas no existen en `stg_complaints` | El CSV de CFPB tenía otros nombres | Revisa el esquema en la consola de BigQuery y ajusta el SELECT. |
 | `dbt docs serve` no abre | Puerto/Preview | Usa "Web Preview → port 8080"; o cambia `--port 8081`. |
 | Build lento | Window functions sobre 6.3M | Normal la primera vez; el mart queda como tabla y luego es rápido. |
 
@@ -557,6 +569,7 @@ Si todo está ✅ → **listo para el Manual 03: Orquestación con Airflow (Clou
 
 - **ELT:** Extract-Load-Transform; transformar dentro del warehouse (estándar moderno).
 - **dbt:** herramienta para transformar datos en el DW con SQL + tests + docs + Git.
+- **dbt-core vs dbt Cloud:** core es gratis y corre en tu terminal; Cloud es un IDE web (plan Developer gratis) que hace lo mismo sin terminal.
 - **Modelo (dbt):** un archivo `.sql` con un `SELECT` que dbt materializa.
 - **`ref()`:** referencia a otro modelo; crea dependencias y lineage.
 - **`source()`:** referencia a una tabla cruda de entrada.

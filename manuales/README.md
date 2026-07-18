@@ -2,7 +2,9 @@
 
 > Manuales paso a paso, **a prueba de dummies**, para construir de cero una plataforma de **Detección de Fraude Bancario** completamente en la nube (Google Cloud Platform), cubriendo el 100% de los requisitos del cargo de **Ingeniero Machine Learning** de Ceiba Software.
 >
-> **Filosofía:** Todo en la nube. Casi nada se instala en tu PC. Tu centro de operaciones es **Google Cloud Shell** (una terminal Linux en el navegador, gratis). Sigue los manuales en orden; cada uno asume que completaste el anterior.
+> **Filosofía:** Todo en la nube. Casi nada se instala en tu PC. Sigue los manuales en orden; cada uno asume que completaste el anterior.
+>
+> 🖱️ / ⌨️ **Formato doble camino (UI + CLI):** cada paso operativo se explica **primero por la Consola web (clic por clic)** y, al lado, con su **comando equivalente en Cloud Shell**. Puedes completar los manuales **solo con la interfaz gráfica** si el terminal aún se te hace cuesta arriba, y usar el CLI como referencia y "músculo" para entrevistas. Donde una herramienta es inevitablemente de código (dbt, Airflow, RAG, agentes) te doy la vía **más visual posible** (el editor gráfico de Cloud Shell/VS Code, notebooks de Vertex AI, la web de Airflow, dashboards). Lee el bloque **"🖱️ / ⌨️ Cómo leer este manual"** al inicio de cada uno.
 
 ---
 
@@ -54,10 +56,13 @@ Una plataforma de analítica y detección de fraude **para el departamento de fr
 ## 🧭 Cómo usar estos manuales
 
 1. **Sigue el orden.** Cada manual construye sobre el anterior.
-2. **No saltes los "✅ Checkpoint".** Son verificaciones para confirmar que vas bien antes de seguir.
-3. **Copia los comandos tal cual**, salvo donde diga `<REEMPLAZAR>`.
-4. Si algo falla, ve a la sección **"🛟 Solución de problemas"** al final de cada manual.
-5. Al terminar cada manual, haz **commit a GitHub** (te lo recuerdo en cada uno). Lo que no está en GitHub, no existe para el reclutador.
+2. **Elige tu camino: 🖱️ UI o ⌨️ CLI.** Cada paso trae ambos. Si eres semi-junior, haz primero la **UI** para entender qué pasa; luego, si quieres, repite por CLI para ganar soltura (lo esperan en entrevista).
+3. **No saltes los "✅ Checkpoint".** Son verificaciones para confirmar que vas bien antes de seguir.
+4. **Copia los comandos/valores tal cual**, salvo donde diga `<REEMPLAZAR>`.
+5. Si algo falla, ve a la sección **"🛟 Solución de problemas"** al final de cada manual.
+6. Al terminar cada manual, haz **commit a GitHub** (te lo recuerdo en cada uno). Lo que no está en GitHub, no existe para el reclutador.
+
+> 💡 **¿Se puede hacer todo por la interfaz gráfica, como en AWS?** En gran parte **sí**: crear buckets, cargar a BigQuery, correr SQL, entrenar modelos con BigQuery ML, operar Airflow y ver dashboards son 100% por clics. Lo que es **código por naturaleza** (dbt, los DAGs de Airflow, RAG y agentes) no tiene un botón equivalente **en ninguna nube** — ahí te damos la forma más visual (editores gráficos, notebooks) y el código explicado línea por línea.
 
 ---
 
@@ -100,9 +105,12 @@ Una plataforma de analítica y detección de fraude **para el departamento de fr
 
 ## 📌 Convenciones de notación
 
-- `comando a ejecutar` → cópialo en Cloud Shell.
+- 🖱️ **Por la Consola (UI)** → hazlo con clics en la consola web (`console.cloud.google.com`).
+- ⌨️ **Equivalente en CLI** → el mismo resultado con un comando en Cloud Shell.
+- `comando a ejecutar` → cópialo en Cloud Shell (o en la terminal de tu PC cuando el manual lo indique).
 - `<REEMPLAZAR>` → cámbialo por tu valor (sin los `< >`).
 - **✅ Checkpoint** → punto de verificación obligatorio.
 - **🛟** → solución de problemas.
 - **💡** → tip o explicación del "por qué".
 - **📖** → glosario / concepto clave.
+- **🔁** → equivalente en AWS (multi-cloud).

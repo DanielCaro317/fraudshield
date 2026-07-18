@@ -9,6 +9,19 @@
 
 ---
 
+## 🖱️ / ⌨️ Cómo leer este manual (agente = código, con visual donde se puede)
+
+Igual que el RAG: **un agente se construye con código.** Es la habilidad estrella que Proxify busca, así que la practicamos de verdad. Pero la hacemos amable:
+
+- 🖱️ **Corre el agente en un notebook** (Jupyter en VS Code) para **ver cada paso** del grafo imprimirse en orden (fetch → score → decisión → …). Es la mejor forma de *entender* el flujo.
+- 🖱️ **LangGraph sí tiene visual:** puedes **dibujar el grafo** (`draw_mermaid()` / `draw_ascii()`) y verlo como diagrama. Y existe **LangGraph Studio**, una app visual para *ejecutar y depurar* agentes viendo el grafo animarse paso a paso (callout en §6).
+- 🖱️ **Datos por UI:** exportar el modelo y la muestra se hace desde la consola de BigQuery / Cloud Storage.
+- ⌨️ **Terminal:** también puedes correr `python fraud_agent.py`.
+
+👉 **Para semi-junior:** trabaja en notebook, ejecuta celda por celda, y dibuja el grafo para tu portafolio. Ver el flujo animarse ayuda muchísimo a entender qué es un "agente".
+
+---
+
 ## 📋 Tabla de contenido
 
 1. [Conceptos previos: ¿qué es un agente?](#1-conceptos)
@@ -95,36 +108,44 @@ Cada nodo es una **tool/paso**; la arista condicional es la **decisión** del ag
 El agente vive en `agents/` y necesita **2 archivos locales**: tu modelo y una muestra de transacciones. También la base vectorial del RAG (ya está en `rag/chroma_db`).
 
 ### 4.1 — Subir el modelo a GCS (si no lo hiciste en el Manual 04)
-En **Cloud Shell**:
+
+🖱️ **Por la UI:** Cloud Storage → bucket → `curated/models/` → **UPLOAD** el `fraud_model.joblib`.
+
+⌨️ **Por CLI (Cloud Shell):**
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export BUCKET="gs://${PROJECT_ID}-datalake"
 gcloud storage cp ~/fraudshield/ml/fraud_model.joblib "$BUCKET/curated/models/fraud_model.joblib"
 ```
 
-### 4.2 — Exportar una muestra de transacciones (Cloud Shell)
+### 4.2 — Exportar una muestra de transacciones
+
+🖱️ **Por la UI (BigQuery):** editor → RUN:
+```sql
+CREATE OR REPLACE TABLE `fraud_dbt.tx_agent_sample` AS
+SELECT * FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 1 LIMIT 15
+UNION ALL
+SELECT * FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 0 LIMIT 15;
+```
+Luego Explorer → `tx_agent_sample` → **⋮ → Export → Export to GCS** → `.../curated/tx_agent_sample.csv`.
+
+⌨️ **Por CLI (Cloud Shell):**
 ```bash
 bq query --use_legacy_sql=false --replace \
   --destination_table=fraud_dbt.tx_agent_sample \
   'SELECT * FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 1 LIMIT 15
    UNION ALL
    SELECT * FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 0 LIMIT 15'
-
 bq extract --destination_format=CSV \
   fraud_dbt.tx_agent_sample "$BUCKET/curated/tx_agent_sample.csv"
-
-# Descargar ambos a tu home de Cloud Shell para bajarlos al PC
-gcloud storage cp "$BUCKET/curated/models/fraud_model.joblib" ~/
-gcloud storage cp "$BUCKET/curated/tx_agent_sample.csv" ~/
 ```
 
-### 4.3 — Descargar a tu PC
-En Cloud Shell, menú **⋮ → Download** para `fraud_model.joblib` y `tx_agent_sample.csv`. Guárdalos en `fraudshield\agents\`.
+### 4.3 — Descargar a tu PC 🖱️
+Desde **Cloud Storage** en la consola → tu bucket → `curated/` → **DOWNLOAD** en `fraud_model.joblib` y `tx_agent_sample.csv`. (O Cloud Shell menú **⋮ → Download**.) Guárdalos en `fraudshield\agents\`.
 
 ### 4.4 — Instalar dependencias (en tu PC, reusa el venv del RAG)
 ```powershell
 cd fraudshield\agents
-# reusa el entorno del RAG o crea uno nuevo:
 ..\rag\.venv\Scripts\Activate.ps1
 pip install langgraph joblib xgboost scikit-learn pandas
 ```
@@ -137,7 +158,7 @@ En `fraudshield\agents\` tienes `fraud_model.joblib` y `tx_agent_sample.csv`; la
 
 ## 5. Construir
 
-Crea `agents\fraud_agent.py`:
+`agents\fraud_agent.py` (o pégalo por bloques en un notebook):
 ```python
 """
 Agente Investigador de Fraude (LangGraph):
@@ -275,18 +296,22 @@ El archivo `agents/fraud_agent.py` está creado y se entiende: 5 nodos + 1 arist
 ```powershell
 python fraud_agent.py
 ```
-Verás el agente recorrer el grafo para **dos** transacciones:
+(o ejecuta la celda del notebook). Verás el agente recorrer el grafo para **dos** transacciones:
 - La **fraudulenta** → `fetch → score (SOSPECHOSA) → investigate → draft` → imprime un **SAR redactado**.
 - La **legítima** → `fetch → score (OK) → close` → cierra el caso.
 
 🎉 ¡Tu agente ejecuta un **workflow multi-paso** orquestando modelo + RAG + LLM!
 
-### 6.1 — Visualizar el grafo (opcional, útil para el portafolio)
+### 6.1 — Visualizar el grafo 🖱️ (para el portafolio)
 Añade al final del `__main__`:
 ```python
-    print(agent.get_graph().draw_ascii())
+    print(agent.get_graph().draw_ascii())       # diagrama en la terminal
+    # o, para un diagrama bonito:
+    # print(agent.get_graph().draw_mermaid())   # pega el resultado en mermaid.live
 ```
-Imprime el diagrama del grafo en la terminal (captúralo para tu README).
+Imprime el diagrama del grafo. Captúralo para tu README. 📸
+
+> 💡 **LangGraph Studio (visual, opcional):** existe una app de escritorio, **LangGraph Studio**, que ejecuta tu agente mostrando el **grafo animándose paso a paso** (qué nodo corre, el estado en cada punto). Es la forma más visual de depurar agentes y queda espectacular en una demo. Requiere estructurar el proyecto con un `langgraph.json`; si te animas, es un gran extra para el portafolio.
 
 ### ✅ Checkpoint 6
 El agente corre para ambas transacciones y produce un SAR para la sospechosa.
@@ -364,10 +389,9 @@ Puedes describir cómo se vería este agente en producción (tools reales + trac
 
 ## 10. Commit
 
-```powershell
-cd ..
-```
-Añade al `.gitignore`:
+🖱️ **Por la UI (VS Code):** Source Control → commit → push (con el `.gitignore` de abajo).
+
+⌨️ **Por CLI:** añade al `.gitignore`:
 ```
 # Agents
 agents/*.joblib
@@ -391,7 +415,7 @@ En GitHub aparece `agents/fraud_agent.py` (sin modelo ni datos).
 - [ ] Modelo y muestra de transacciones disponibles en `agents/`.
 - [ ] **Agente Investigador de Fraude** construido (5 nodos + arista condicional).
 - [ ] El agente corre: fraude → SAR; legítima → cierra.
-- [ ] Visualicé el grafo (para el portafolio).
+- [ ] Visualicé el grafo (draw_ascii/mermaid) para el portafolio.
 - [ ] Entiendo **human-in-the-loop** (interrupts).
 - [ ] Sé la diferencia **workflow vs agente ReAct** y cuándo usar cada uno.
 - [ ] Sé cómo se llevaría a producción (tools reales, tracing, guardrails).
@@ -422,6 +446,7 @@ Si todo está ✅ → **listo para el Manual 06: MLOps + CI/CD + Testing.**
 - **ReAct:** patrón Reason+Act (razonar, actuar, observar, repetir).
 - **Workflow vs agente autónomo:** pasos definidos por ti vs decididos por el LLM.
 - **LangGraph:** framework para agentes/workflows como grafo de estado.
+- **LangGraph Studio:** app visual para ejecutar y depurar agentes viendo el grafo.
 - **State / Node / Edge:** estado compartido / paso / conexión (puede ser condicional).
 - **Arista condicional:** rama del grafo según una decisión.
 - **Human-in-the-loop:** pausa para aprobación humana (interrupt + checkpointer).

@@ -7,6 +7,19 @@
 
 ---
 
+## 🖱️ / ⌨️ Cómo leer este manual (UI + CLI)
+
+Este manual está escrito en formato **doble camino**, pensado para que vayas tranquilo aunque el CLI aún se te haga cuesta arriba:
+
+- 🖱️ **Por la Consola (UI):** clic por clic en la consola web de GCP (`console.cloud.google.com`). Es lo más intuitivo: *ves* lo que haces.
+- ⌨️ **Equivalente en CLI:** el mismo resultado con un comando en **Cloud Shell**. Es lo que se *espera* que domines en una entrevista de Ingeniero ML; te da velocidad. Está al lado como referencia y "músculo".
+
+👉 **Puedes completar el manual entero solo con la UI.** Cuando un paso sea *inevitablemente* de terminal (crear la estructura de carpetas, clonar el repo), te doy también la forma más visual posible (el editor gráfico de Cloud Shell o VS Code).
+
+💡 **Consejo para semi-junior:** haz cada paso primero por la UI para entenderlo. Cuando ya funcione, repítelo por CLI en una segunda pasada. Así aprendes ambos sin frustrarte.
+
+---
+
 ## 📋 Tabla de contenido
 
 1. [Conceptos previos (lee esto primero)](#1-conceptos-previos)
@@ -33,13 +46,15 @@ Antes de tocar nada, entiende **qué es cada cosa**. Esto te evitará confusión
 
 📖 **Google Cloud Platform (GCP):** El conjunto de servicios en la nube de Google (almacenamiento, bases de datos, cómputo, IA). Es uno de los 3 grandes (junto a AWS y Azure) y es el "plus" que pide Ceiba.
 
+📖 **Consola web (UI):** el sitio `console.cloud.google.com` donde administras todo con clics, menús y botones. Es tu tablero de control visual.
+
 📖 **Proyecto (GCP Project):** Un contenedor lógico donde viven todos tus recursos (datos, máquinas, APIs). Todo en GCP pertenece a un proyecto. Cada proyecto tiene un **Project ID** único en el mundo.
 
 📖 **Facturación (Billing):** Una cuenta de pago asociada a uno o más proyectos. Aunque uses el free tier, GCP exige una tarjeta para verificar identidad. **No te cobran sin avisar** si configuras alertas.
 
 📖 **Cloud Shell:** Una máquina Linux temporal y gratuita que Google te da **dentro del navegador**, con todas las herramientas (gcloud, python, git, etc.) ya instaladas. Es tu "computador en la nube". Tiene un disco persistente de 5 GB en `$HOME`.
 
-📖 **gcloud:** La herramienta de línea de comandos (CLI) para controlar GCP desde la terminal. Ya viene instalada en Cloud Shell.
+📖 **gcloud:** La herramienta de línea de comandos (CLI) para controlar GCP desde la terminal. Ya viene instalada en Cloud Shell. **Todo lo que hace gcloud, casi siempre también se puede hacer con clics en la consola** — por eso este manual te muestra las dos formas.
 
 📖 **API:** Para usar cada servicio de GCP (BigQuery, Cloud Storage, etc.) primero debes "habilitar su API" en tu proyecto. Es como activar un interruptor.
 
@@ -53,6 +68,8 @@ Antes de tocar nada, entiende **qué es cada cosa**. Esto te evitará confusión
 
 ## 2. Cuenta GCP
 
+> Esta sección es **100% por UI** (no hay otra forma de crear la cuenta).
+
 ### Paso 2.1 — Verifica tu cuenta de Google
 Necesitas una cuenta de Google (Gmail). Si ya tienes `danielcaro317@gmail.com`, úsala.
 
@@ -64,7 +81,7 @@ Necesitas una cuenta de Google (Gmail). Si ya tienes `danielcaro317@gmail.com`, 
 5. **Paso 2:** selecciona el tipo de cuenta:
    - Tipo de cuenta: **Individual** (Particular).
    - Ingresa tu nombre y dirección.
-6. **Verificación de tarjeta:** ingresa una tarjeta de crédito/débito. 
+6. **Verificación de tarjeta:** ingresa una tarjeta de crédito/débito.
 
    💡 **¿Por qué piden tarjeta?** Solo para verificar que eres humano (evitar abuso). En el free trial **no se cobra automáticamente** al acabar el crédito: la cuenta se pausa y te pide confirmación para pasar a pago. Verás un cargo temporal de ~USD 1 que se reversa.
 7. Clic en **"Iniciar mi prueba gratuita"**.
@@ -80,7 +97,7 @@ Deberías llegar a la **consola de GCP** (`https://console.cloud.google.com/`) y
 
 Por defecto Google te crea un proyecto llamado "My First Project". Vamos a crear uno propio y limpio para FraudShield.
 
-### Paso 3.1 — Crear el proyecto (vía consola web)
+🖱️ **Por la Consola (UI):**
 1. En la consola, arriba a la izquierda (al lado del logo "Google Cloud"), haz clic en el **selector de proyecto** (el menú desplegable que muestra el proyecto actual).
 2. En la ventana que abre, clic en **"Proyecto nuevo"** (New Project), arriba a la derecha.
 3. Llena:
@@ -88,9 +105,13 @@ Por defecto Google te crea un proyecto llamado "My First Project". Vamos a crear
    - **Project ID:** Google sugiere uno (ej. `fraudshield-461512`). **Anótalo**, lo usarás MUCHÍSIMO. Si quieres, edítalo a algo como `fraudshield-tu-nombre` (debe ser único globalmente, solo minúsculas, números y guiones).
    - **Ubicación:** déjalo "Sin organización" (No organization).
 4. Clic en **"Crear"**. Espera ~30 segundos.
+5. Vuelve al selector de proyecto (arriba) y elige **FraudShield**. Confirma que arriba aparece "FraudShield" como proyecto activo.
 
-### Paso 3.2 — Selecciona el proyecto
-Vuelve al selector de proyecto (arriba) y elige **FraudShield**. Confirma que arriba aparece "FraudShield" como proyecto activo.
+⌨️ **Equivalente en CLI (Cloud Shell — lo verás en la sección 5):**
+```bash
+gcloud projects create fraudshield-tu-nombre --name="FraudShield"
+gcloud config set project fraudshield-tu-nombre
+```
 
 ### ✅ Checkpoint 3
 Anota tu **Project ID** aquí para no olvidarlo:
@@ -103,9 +124,9 @@ MI PROJECT ID = ____________________________
 
 ## 4. Presupuesto
 
-⚠️ **Este paso NO es opcional.** Te protege de cobros inesperados.
+⚠️ **Este paso NO es opcional.** Te protege de cobros inesperados. Se hace **por UI**.
 
-### Paso 4.1 — Crear un presupuesto con alertas
+🖱️ **Por la Consola (UI):**
 1. En la consola, usa la barra de búsqueda de arriba y escribe **"Budgets & alerts"** (Presupuestos y alertas). Entra.
    - (Ruta de menú: ☰ → Billing → Budgets & alerts).
 2. Clic en **"Crear presupuesto"** (Create budget).
@@ -121,7 +142,7 @@ MI PROJECT ID = ____________________________
 6. Clic en **"Finish"** (Finalizar).
 
 ### ✅ Checkpoint 4
-Verás tu presupuesto "Presupuesto-FraudShield" en la lista. Ahora recibirás un correo si el gasto del proyecto se acerca a USD 50. 
+Verás tu presupuesto "Presupuesto-FraudShield" en la lista. Ahora recibirás un correo si el gasto del proyecto se acerca a USD 50.
 
 💡 Como casi todo lo que harás cae en el free tier, lo normal es que gastes **USD 0–5** en todo el proyecto (el costo real aparece si dejas Cloud Composer encendido muchos días; el Manual 03 te enseña a apagarlo).
 
@@ -129,97 +150,83 @@ Verás tu presupuesto "Presupuesto-FraudShield" en la lista. Ahora recibirás un
 
 ## 5. Cloud Shell
 
-Cloud Shell será tu terminal principal durante TODO el proyecto.
+Cloud Shell será tu terminal principal durante TODO el proyecto. Aunque uses la UI para casi todo, hay pasos (clonar el repo, correr scripts) que viven aquí. Tranquilo: te acompaño clic a clic.
 
 ### Paso 5.1 — Abrir Cloud Shell
 1. En la consola de GCP, arriba a la derecha, busca el ícono de terminal: **`>_`** ("Activate Cloud Shell"). Haz clic.
 2. Se abre un panel en la parte inferior. La primera vez tarda ~1 min en aprovisionar tu máquina y puede pedirte **"Authorize"** — acepta.
 3. Cuando veas un prompt como `tu_usuario@cloudshell:~ (fraudshield-461512)$` ¡ya estás dentro de tu Linux en la nube!
 
+💡 **¿Nunca has usado una terminal?** Una terminal es solo una caja donde escribes una orden (comando) y presionas Enter. No puede "romper" tu PC; estás en una máquina desechable de Google. Si algo sale raro, ciérrala y ábrela de nuevo.
+
 ### Paso 5.2 — Familiarízate (ejecuta estos comandos)
 Copia y pega uno por uno (Enter después de cada uno):
 
 ```bash
-# Ver en qué máquina estás
-whoami
-
-# Ver el directorio actual (tu home persistente)
-pwd
-
-# Ver la versión de Python (ya viene instalado)
-python3 --version
-
-# Ver que gcloud está instalado
-gcloud --version
-
-# Ver que git está instalado
-git --version
+whoami            # Ver el usuario en el que estás
+pwd               # Ver el directorio actual (tu home persistente)
+python3 --version # Python ya viene instalado
+gcloud --version  # gcloud ya viene instalado
+git --version     # git ya viene instalado
 ```
 
 💡 **Lo importante:** todo lo que guardes en tu carpeta `$HOME` (`/home/tu_usuario`) **persiste** entre sesiones (5 GB). Lo que instales fuera de ahí se borra cuando la sesión expira (tras ~1 h de inactividad o 12 h de uso). Por eso trabajaremos siempre dentro de `$HOME`.
 
-### Paso 5.3 — El editor de código (Cloud Shell Editor)
-Cloud Shell incluye un editor visual tipo VS Code. Para abrirlo, clic en el botón **"Open Editor"** (ícono de lápiz) en la barra de Cloud Shell. Podrás editar archivos con interfaz gráfica y volver a la terminal con "Open Terminal".
+### Paso 5.3 — El editor de código (Cloud Shell Editor) — ¡tu mejor amigo visual!
+Cloud Shell incluye un **editor visual idéntico a VS Code**. Clic en el botón **"Open Editor"** (ícono de lápiz) en la barra de Cloud Shell. Ahí puedes:
+- Ver tus carpetas y archivos en un panel lateral (como el explorador de Windows).
+- Crear carpetas/archivos con clic derecho → *New Folder* / *New File*.
+- Editar y pegar texto con el mouse (mucho más cómodo que la terminal para archivos largos).
+- Volver a la terminal con **"Open Terminal"**.
+
+👉 Cada vez que un paso diga "crea este archivo", puedes hacerlo aquí con el mouse en lugar de la terminal.
 
 ### ✅ Checkpoint 5
-Los 5 comandos del paso 5.2 deben mostrar versiones sin errores. Python 3.x, gcloud, git presentes.
+Los 5 comandos del paso 5.2 muestran versiones sin errores. Sabes abrir el "Open Editor".
 
 ---
 
 ## 6. gcloud
 
-Vamos a configurar gcloud para que sepa cuál es tu proyecto por defecto y a guardar variables útiles.
+Le decimos a gcloud cuál es tu proyecto por defecto, para no repetirlo en cada comando.
 
-### Paso 6.1 — Configurar el proyecto por defecto
-Reemplaza `<TU_PROJECT_ID>` por el ID que anotaste en el Checkpoint 3:
+🖱️ **Por la Consola (UI):**
+- El "proyecto por defecto" en la UI es simplemente el que tienes **seleccionado en el selector de proyecto** (arriba, junto al logo). Si arriba dice **FraudShield**, ya estás en el proyecto correcto — no hay que hacer nada más.
+- La **región** en la UI no se fija globalmente: la eliges en un desplegable cada vez que creas un recurso (bucket, dataset, etc.). En este proyecto siempre elegirás **`us-central1`**.
 
+⌨️ **Equivalente en CLI (Cloud Shell):** fija proyecto y región para que la terminal no te los pregunte:
 ```bash
+# Reemplaza <TU_PROJECT_ID> por el que anotaste en el Checkpoint 3
 gcloud config set project <TU_PROJECT_ID>
-```
-Salida esperada: `Updated property [core/project].`
-
-### Paso 6.2 — Verificar la configuración
-```bash
-gcloud config list
-```
-Debe mostrar tu `project = <TU_PROJECT_ID>` y tu cuenta.
-
-### Paso 6.3 — Definir la región
-Trabajaremos en una región cercana y económica. Usaremos **`us-central1`** (Iowa) porque tiene todos los servicios y suele estar en free tier. Guárdala como configuración:
-
-```bash
 gcloud config set compute/region us-central1
 gcloud config set compute/zone us-central1-a
-```
+gcloud config list          # verifica proyecto, región y cuenta
 
-💡 **¿Por qué us-central1 y no Suramérica?** `southamerica-east1` (São Paulo) existe pero es más caro y a veces no tiene todos los servicios/free tier. Para aprender, `us-central1` es el estándar. La latencia no te afectará para este proyecto.
-
-### Paso 6.4 — Guardar variables de entorno reutilizables
-Para no repetir tu Project ID, lo guardaremos en una variable cada sesión. Ejecuta:
-
-```bash
+# Guardar tu Project ID en una variable reutilizable (y que se cargue siempre):
 export PROJECT_ID=$(gcloud config get-value project)
+echo 'export PROJECT_ID=$(gcloud config get-value project 2>/dev/null)' >> ~/.bashrc
 echo "Mi proyecto es: $PROJECT_ID"
 ```
 
-💡 Para que se cargue automáticamente cada vez que abras Cloud Shell, añádelo a tu `.bashrc`:
-
-```bash
-echo 'export PROJECT_ID=$(gcloud config get-value project 2>/dev/null)' >> ~/.bashrc
-```
+💡 **¿Por qué us-central1 y no Suramérica?** `southamerica-east1` (São Paulo) existe pero es más caro y a veces no tiene todos los servicios/free tier. Para aprender, `us-central1` (Iowa) es el estándar. La latencia no te afectará.
 
 ### ✅ Checkpoint 6
-`gcloud config list` muestra tu proyecto y región. `echo $PROJECT_ID` muestra tu Project ID.
+En la UI, arriba dice **FraudShield**. En CLI, `gcloud config list` muestra tu proyecto y región, y `echo $PROJECT_ID` muestra tu Project ID.
 
 ---
 
 ## 7. APIs
 
-Cada servicio necesita su API habilitada. Las habilitamos todas de una vez (esto puede tardar 1–2 min).
+Cada servicio necesita su API habilitada (activar el "interruptor"). Son 10.
 
-### Paso 7.1 — Habilitar las APIs del proyecto
-Copia y pega TODO el bloque:
+🖱️ **Por la Consola (UI):**
+1. Menú **☰** → **APIs & Services** → **Library** (Biblioteca).
+2. En el buscador escribe el nombre del servicio (ej. **BigQuery API**) → clic en el resultado → botón azul **ENABLE** (Habilitar).
+3. Repite para cada uno: *BigQuery API, Cloud Storage API, Cloud Composer API, Vertex AI API, Cloud Run Admin API, Artifact Registry API, Cloud Build API, IAM API, Cloud SQL Admin API, Secret Manager API.*
 
+💡 **Atajo mental:** no tienes que habilitarlas todas hoy. Cada vez que entres por primera vez a un servicio en la consola (ej. BigQuery), si su API no está activa, la propia consola te muestra un botón **ENABLE**. Puedes ir habilitando "según necesites". Pero hacerlo de una vez por CLI es más cómodo.
+
+⌨️ **Equivalente en CLI (Cloud Shell) — habilita las 10 de un golpe:**
 ```bash
 gcloud services enable \
   bigquery.googleapis.com \
@@ -246,20 +253,19 @@ gcloud services enable \
 - `sqladmin` → Cloud SQL (para pgvector en el RAG).
 - `secretmanager` → guardar claves secretas (API keys).
 
-### Paso 7.2 — Verificar
+**Verificar** — UI: **APIs & Services → Enabled APIs & services** (deben aparecer en la lista). CLI:
 ```bash
 gcloud services list --enabled --filter="bigquery OR storage OR aiplatform" --format="value(config.name)"
 ```
-Deben aparecer las tres en la lista.
 
 ### ✅ Checkpoint 7
-El comando de habilitación termina con `Operation ... finished successfully` (o sin error). Las APIs aparecen como habilitadas.
+Las 10 APIs aparecen como habilitadas (en la lista de la UI o sin error en el CLI).
 
 ---
 
 ## 8. GitHub
 
-Todo tu código vivirá en GitHub. Es tu portafolio.
+Todo tu código vivirá en GitHub. Es tu portafolio. Esta sección es **100% por UI**.
 
 ### Paso 8.1 — Crear cuenta (si no tienes)
 1. Ve a **https://github.com/** → **Sign up**.
@@ -283,67 +289,64 @@ Tienes un repo en `https://github.com/<tu_usuario>/fraudshield` con un README y 
 
 ## 9. Conectar GitHub
 
-Vamos a clonar el repo dentro de Cloud Shell y configurar la autenticación.
+Necesitamos traer el repo a tu entorno de trabajo. Tienes dos caminos según dónde te sientas más cómodo.
 
-### Paso 9.1 — Configurar tu identidad de Git
-En Cloud Shell:
+🖱️ **Opción A — VS Code en tu PC (la más visual):**
+1. Instala **VS Code** (https://code.visualstudio.com/) y **Git** (https://git-scm.com/download/win) — ver Parte B.
+2. En VS Code: **Ctrl+Shift+P** → escribe `Git: Clone` → pega la URL `https://github.com/<tu_usuario>/fraudshield.git` → elige carpeta.
+3. VS Code te pedirá iniciar sesión en GitHub con un botón (**Sign in with browser**) — sin tokens manuales. A partir de ahí, *commit* y *push* se hacen con botones en el panel **Source Control** (ícono de ramas a la izquierda).
+
+⌨️ **Opción B — Cloud Shell (CLI, la del resto de manuales):**
 ```bash
+# 1) Tu identidad de Git
 git config --global user.name "<Tu Nombre>"
 git config --global user.email "<tu_correo_github>"
-```
 
-### Paso 9.2 — Crear un Personal Access Token (PAT) en GitHub
-GitHub ya no acepta contraseña para git; necesitas un token.
-1. En GitHub: clic en tu foto (arriba derecha) → **Settings** → (abajo) **Developer settings** → **Personal access tokens** → **Tokens (classic)** → **Generate new token (classic)**.
-2. **Note:** `cloud-shell-fraudshield`. **Expiration:** 90 days.
-3. Marca el scope **`repo`** (completo).
-4. **Generate token**. **COPIA el token** (empieza con `ghp_...`) y guárdalo temporalmente en un bloc de notas. Solo se muestra una vez.
+# 2) GitHub ya no acepta contraseña: crea un Personal Access Token (PAT)
+#    En GitHub: foto → Settings → Developer settings → Personal access tokens →
+#    Tokens (classic) → Generate new token (classic) → scope "repo" → copia el ghp_...
 
-### Paso 9.3 — Clonar el repositorio
-En Cloud Shell (reemplaza `<tu_usuario>`):
-```bash
+# 3) Clonar
 cd ~
 git clone https://github.com/<tu_usuario>/fraudshield.git
 cd fraudshield
-```
-Cuando te pida:
-- **Username:** tu usuario de GitHub.
-- **Password:** pega el **token** (`ghp_...`), NO tu contraseña.
+#   Username: tu usuario | Password: pega el token ghp_... (NO tu contraseña)
 
-💡 Para no reescribir el token cada vez, guarda las credenciales:
-```bash
+# 4) Que recuerde el token para no repetirlo
 git config --global credential.helper store
 ```
-(La próxima vez que hagas push, las guarda en `~/.git-credentials`).
+
+💡 **Recomendación para semi-junior:** usa la **Opción A (VS Code)** para el día a día — clonar, commit y push con botones es mucho menos frustrante. Deja Cloud Shell para correr los scripts. Ambas trabajan sobre el mismo repo de GitHub.
 
 ### ✅ Checkpoint 9
-`cd ~/fraudshield && ls -la` muestra `README.md` y `.gitignore`. Estás dentro del repo clonado.
+Tienes la carpeta `fraudshield` (en tu PC vía VS Code, o en Cloud Shell) con `README.md` y `.gitignore` dentro.
 
 ---
 
 ## 10. Estructura
 
-Vamos a crear el esqueleto de carpetas del proyecto. Dentro de `~/fraudshield`:
+Creamos el esqueleto de carpetas del proyecto dentro de `fraudshield`.
 
-### Paso 10.1 — Crear carpetas
+🖱️ **Por la UI (Cloud Shell Editor o VS Code):**
+1. Abre **Open Editor** (Cloud Shell) o el explorador de VS Code.
+2. Clic derecho sobre la carpeta `fraudshield` → **New Folder** → crea una por una:
+   `extract`, `dbt_project`, `dags`, `notebooks`, `ml`, `finetune`, `rag`, `agents`, `eval`, `api`, `frontend`, `infra`, `docs`, `config`.
+3. (Opcional) dentro de cada una, clic derecho → **New File** → `.gitkeep` (un archivo vacío para que Git conserve la carpeta).
+
+⌨️ **Equivalente en CLI (Cloud Shell) — mucho más rápido:**
 ```bash
 cd ~/fraudshield
 mkdir -p extract dbt_project dags notebooks ml finetune rag agents eval api frontend infra docs config .github/workflows
-```
-💡 Carpetas nuevas del **super-proyecto** (fusión Ceiba + Proxify): `finetune/` (LoRA/QLoRA local), `agents/` (Agente de Fraude con LangGraph), `eval/` (evaluación RAGAS), `infra/` (Terraform/IaC).
-
-### Paso 10.2 — Añadir archivos guía (placeholders) para que las carpetas existan en Git
-```bash
 touch extract/.gitkeep dbt_project/.gitkeep dags/.gitkeep notebooks/.gitkeep \
       ml/.gitkeep finetune/.gitkeep rag/.gitkeep agents/.gitkeep eval/.gitkeep \
       api/.gitkeep frontend/.gitkeep infra/.gitkeep docs/.gitkeep config/.gitkeep
 ```
+💡 Carpetas del **super-proyecto** (fusión Ceiba + Proxify): `finetune/` (LoRA/QLoRA local), `agents/` (Agente de Fraude con LangGraph), `eval/` (evaluación RAGAS), `infra/` (Terraform/IaC).
 
-### Paso 10.3 — Crear un README de proyecto mejorado
-Abre el editor (botón "Open Editor") o usa este comando para reemplazar el README:
+### Paso 10.3 — Mejorar el README del proyecto
+Abre `README.md` en el editor visual y reemplaza su contenido por esto (o usa el `cat >` de abajo en la terminal):
 
-```bash
-cat > README.md << 'EOF'
+```markdown
 # FraudShield 🛡️🏦
 
 Plataforma cloud-native de **detección de fraude bancario (Datos + IA)** para un departamento antifraude, construida en **Google Cloud Platform**.
@@ -374,26 +377,29 @@ Python · SQL · BigQuery · dbt · Apache Airflow (Cloud Composer) · scikit-le
 
 ## Estado
 🚧 En construcción — siguiendo metodología CRISP-DM.
-EOF
 ```
 
 ### ✅ Checkpoint 10
-`ls` dentro de `~/fraudshield` muestra todas las carpetas (extract, dbt_project, dags, etc.).
+El explorador de archivos (UI) o `ls` (CLI) dentro de `fraudshield` muestra todas las carpetas.
 
 ---
 
 ## 11. Commit
 
-Guarda todo en GitHub.
+Guarda todo en GitHub (subir tus cambios).
 
+🖱️ **Por la UI (VS Code / Cloud Shell Editor):**
+1. Ve al panel **Source Control** (ícono de ramas, izquierda).
+2. Verás la lista de archivos nuevos. Escribe un mensaje arriba: `Estructura inicial del proyecto y entorno cloud configurado`.
+3. Clic en **✓ Commit** → luego **Sync Changes** / **Push** (la flechita ↑).
+
+⌨️ **Equivalente en CLI (Cloud Shell):**
 ```bash
 cd ~/fraudshield
 git add .
 git commit -m "Estructura inicial del proyecto y entorno cloud configurado"
 git push origin main
 ```
-(Si pide usuario/token, ingrésalos; ya quedarán guardados).
-
 💡 Si tu rama se llama `master` en vez de `main`, usa `git push origin master`. Verifica con `git branch`.
 
 ### ✅ Checkpoint 11
@@ -407,7 +413,7 @@ Recarga `https://github.com/<tu_usuario>/fraudshield` en el navegador: deben apa
 >
 > 💡 Esta Parte B **no bloquea** el Manual 01. Puedes hacerla ahora o cuando llegues a los Manuales 04B/05/07. Pero déjala lista temprano.
 
-### 11B.1 — Cuenta AWS (free tier)
+### 11B.1 — Cuenta AWS (free tier) — por UI
 1. Ve a **https://aws.amazon.com/free** → **"Create a Free Account"**.
 2. Email, nombre de cuenta, verifica. Tipo **Personal**. Ingresa tarjeta (verificación; free tier 12 meses + servicios siempre gratis).
 3. Elige el plan de soporte **Basic (gratis)**.
@@ -457,7 +463,7 @@ Esto lo instalas **en tu computador**, no en Cloud Shell. Te servirá para desar
    💡 Tu RTX 4070 Super (12 GB VRAM) corre modelos de 7–8B sin problema → desarrollas el RAG y los agentes **sin gastar API**.
 6. **(Para fine-tuning, Manual 04B)** verifica que tu GPU es visible para PyTorch (lo instalarás en su momento):
    ```powershell
-   # más adelante, dentro de tu entorno: 
+   # más adelante, dentro de tu entorno:
    # python -c "import torch; print(torch.cuda.is_available())"  -> debe dar True
    ```
 7. **Clona el repo también en local** (para trabajar local cuando convenga):
@@ -482,10 +488,10 @@ Marca todo antes de pasar al Manual 01:
 - [ ] Cuenta GCP activa con crédito gratis visible.
 - [ ] Proyecto **FraudShield** creado y seleccionado; tengo anotado mi **Project ID**.
 - [ ] Presupuesto con alertas configurado.
-- [ ] Cloud Shell abre y los comandos de versión funcionan.
-- [ ] `gcloud config list` muestra mi proyecto y región `us-central1`.
+- [ ] Cloud Shell abre y los comandos de versión funcionan; sé usar "Open Editor".
+- [ ] Proyecto activo en la UI (arriba dice FraudShield) / `gcloud config list` correcto.
 - [ ] Las 10 APIs habilitadas sin error.
-- [ ] Repo `fraudshield` creado en GitHub y clonado en Cloud Shell.
+- [ ] Repo `fraudshield` creado en GitHub y clonado (VS Code o Cloud Shell).
 - [ ] Estructura de carpetas creada (incluye `agents/ finetune/ eval/ infra/`).
 - [ ] Primer commit visible en GitHub.
 
@@ -505,10 +511,10 @@ Si lo obligatorio está ✅ → **estás listo para el Manual 01: Ingesta de dat
 |---|---|---|
 | "Billing account not found" al habilitar APIs | El proyecto no tiene billing vinculado | Consola → Billing → vincula la cuenta de facturación al proyecto FraudShield. |
 | Cloud Shell dice "session expired" | Inactividad > 1 h | Solo reábrelo; tu `$HOME` persiste. Vuelve a hacer `export PROJECT_ID=...` si no lo pusiste en `.bashrc`. |
-| `git push` pide usuario y rechaza contraseña | GitHub no acepta contraseña | Usa el **Personal Access Token** como "password". |
-| "Permission denied" en gcloud | Cuenta sin permisos en el proyecto | Asegúrate de estar en el proyecto correcto: `gcloud config set project <ID>`. |
+| `git push` pide usuario y rechaza contraseña | GitHub no acepta contraseña | Usa el **Personal Access Token** como "password", o cambia a la Opción A (VS Code con login por navegador). |
+| "Permission denied" en gcloud | Cuenta sin permisos / proyecto equivocado | Verifica el selector de proyecto (UI) o `gcloud config set project <ID>`. |
 | No aparece el ícono de Cloud Shell | Navegador/extensión | Usa Chrome, desactiva bloqueadores, recarga la consola. |
-| API tarda mucho en habilitar | Normal | Espera 1–2 min; reintenta el comando, es idempotente. |
+| El botón ENABLE de una API no aparece | Ya está habilitada | Revisa en APIs & Services → Enabled APIs. |
 | Token de GitHub "expirado" | Pasaron los 90 días | Genera uno nuevo y vuelve a hacer push. |
 
 ---
@@ -516,16 +522,18 @@ Si lo obligatorio está ✅ → **estás listo para el Manual 01: Ingesta de dat
 ## 14. Glosario
 
 - **GCP:** Google Cloud Platform, la nube de Google.
+- **Consola (UI):** el sitio web para administrar GCP con clics.
 - **Project ID:** identificador único global de tu proyecto en GCP.
 - **Billing account:** cuenta de facturación; necesaria aunque uses free tier.
 - **Free tier / Free trial:** créditos gratis (USD 300/90 días) + servicios siempre gratis con límites.
 - **Cloud Shell:** terminal Linux gratuita en el navegador con herramientas preinstaladas.
+- **Open Editor:** el editor visual (tipo VS Code) integrado en Cloud Shell.
 - **gcloud:** CLI para administrar GCP.
 - **API:** interfaz que se debe "habilitar" para usar cada servicio.
 - **Data Lake:** almacén de archivos crudos (Cloud Storage).
 - **Data Warehouse:** base analítica SQL para grandes volúmenes (BigQuery).
 - **Repositorio (repo):** carpeta versionada de tu código en GitHub.
-- **PAT (Personal Access Token):** token que reemplaza la contraseña para autenticarte en GitHub.
+- **PAT (Personal Access Token):** token que reemplaza la contraseña para autenticarte en GitHub por CLI.
 - **Región/Zona:** ubicación física de los servidores donde corren tus recursos.
 - **`.gitignore`:** archivo que le dice a Git qué NO subir (ej. credenciales, temporales).
 

@@ -5,7 +5,18 @@
 > **Tiempo estimado:** 6–8 horas.
 > **Prerrequisito:** Manual 02 completo (`fraud_dbt.mart_fraud_features` existe).
 > **Cubre del cargo:** modelamiento estadístico y ML **tradicional y avanzado**, EDA, CRISP-DM (Ceiba) · ML sólido y explicable (Proxify).
-> **Nube:** GCP (BigQuery ML) + Python (Cloud Shell o tu PC local). 🔁 callout AWS (SageMaker).
+> **Nube:** GCP (BigQuery ML) + Python (Vertex AI Workbench, Cloud Shell o tu PC local). 🔁 callout AWS (SageMaker).
+
+---
+
+## 🖱️ / ⌨️ Cómo leer este manual (mitad SQL visual, mitad Python)
+
+Este manual tiene dos mundos, y ambos pueden ser muy visuales:
+
+- **EDA + baseline (BigQuery ML) = 100% UI.** Todo es **SQL que corres en la consola de BigQuery** (Compose new query → RUN). Y lo mejor: cuando entrenas un modelo con BQML, BigQuery te muestra sus métricas en **pestañas visuales con gráficos** (curva ROC, precision-recall, matriz de confusión) — sin escribir código de gráficas.
+- **XGBoost + SHAP = Python.** Aquí sí hay código. La forma **más visual** de correrlo en GCP es un **notebook de Vertex AI Workbench** (celdas que ejecutas con un botón ▶, ves tablas y gráficas al instante — como Jupyter). También sirve el editor de Cloud Shell o tu PC local.
+
+👉 **Para semi-junior:** haz el EDA y el baseline enteros en la **consola de BigQuery** (súper cómodo). Para el XGBoost, usa un **notebook de Vertex AI** (te guío para crearlo) en vez de la terminal — verás cada resultado paso a paso.
 
 ---
 
@@ -68,7 +79,7 @@
 Este es **el** tema que distingue a quien sabe de fraude. Domínalo.
 
 ### 3.1 — El problema
-En `mart_fraud_features`, solo **~0.13%** de las transacciones son fraude. Si un modelo dijera "todo es legítimo", acertaría el **99.87%**... y sería **inútil** (no atrapa ni un fraude). 
+En `mart_fraud_features`, solo **~0.13%** de las transacciones son fraude. Si un modelo dijera "todo es legítimo", acertaría el **99.87%**... y sería **inútil** (no atrapa ni un fraude).
 
 > 🔴 **Por eso la `accuracy` (exactitud) NO sirve en fraude.** Es la trampa clásica.
 
@@ -97,7 +108,7 @@ Puedes explicar por qué la accuracy engaña y qué es AUC-PR.
 
 📖 **EDA (Análisis Exploratorio de Datos):** entender los datos antes de modelar. Lo haremos con SQL sobre el mart (rápido, sin descargar nada).
 
-> Trabaja en **Cloud Shell** o en la consola de **BigQuery** (pega y "Run").
+🖱️ **Por la UI:** consola → **BigQuery** → **Compose new query** → pega cada consulta → **RUN**. Los resultados salen en una tabla abajo; puedes cambiar a la pestaña **CHART** para graficarlos con clics.
 
 ### 4.1 — Distribución de la etiqueta
 ```sql
@@ -132,7 +143,7 @@ GROUP BY is_fraud;
 💡 Si los promedios difieren mucho entre fraude y no-fraude, esas features **sirven**. Verás que las cuentas fraudulentas se drenan casi siempre y tienen montos/errores de saldo distintos.
 
 ### 4.4 — (Opcional) Perfilado automático
-Si quieres un reporte visual, descarga una muestra y usa `ydata-profiling` localmente. No es obligatorio; el EDA por SQL ya te da lo esencial.
+Si quieres un reporte visual, descarga una muestra y usa `ydata-profiling` en un notebook. No es obligatorio; el EDA por SQL ya te da lo esencial.
 
 ### ✅ Checkpoint 4
 Entiendes: el desbalanceo, que el fraude se concentra en 2 tipos, y que tus features separan las clases.
@@ -154,9 +165,17 @@ En nuestro caso:
 💡 **Frase para entrevista:** "Reviso explícitamente la fuga de datos: excluyo índices de tiempo y cualquier señal que sea proxy de la etiqueta o que no exista en tiempo de inferencia."
 
 ### 5.2 — Crear una muestra de entrenamiento manejable
-Entrenar XGBoost sobre 6.3M filas en Cloud Shell es pesado. Creamos una **muestra**: **todo el fraude** + una fracción del no-fraude. Esto reduce tamaño y atenúa el desbalanceo (luego el modelo y el umbral lo terminan de manejar).
+Entrenar XGBoost sobre 6.3M filas es pesado. Creamos una **muestra**: **todo el fraude** + una fracción del no-fraude. Reduce tamaño y atenúa el desbalanceo (luego el modelo y el umbral lo terminan de manejar).
 
-En Cloud Shell:
+🖱️ **Por la UI (consola de BigQuery):** pega esta consulta en el editor y **RUN**. Luego, en los resultados, clic en **SAVE RESULTS → BigQuery table** → dataset `fraud_dbt`, tabla `train_sample`. (O usa el `CREATE TABLE AS` de abajo directamente.)
+```sql
+CREATE OR REPLACE TABLE `fraud_dbt.train_sample` AS
+SELECT * EXCEPT(step) FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 1
+UNION ALL
+SELECT * EXCEPT(step) FROM `fraud_dbt.mart_fraud_features` WHERE is_fraud = 0 AND RAND() < 0.04;
+```
+
+⌨️ **Equivalente en CLI:**
 ```bash
 bq query --use_legacy_sql=false --replace \
   --destination_table=fraud_dbt.train_sample \
@@ -167,6 +186,10 @@ bq query --use_legacy_sql=false --replace \
 💡 `RAND() < 0.04` toma ~4% del no-fraude (~250k filas) + los ~8k fraudes → ~260k filas, manejable.
 
 ### 5.3 — Exportar la muestra para Python
+
+🖱️ **Por la UI:** BigQuery → Explorer → tabla `train_sample` → menú **⋮** → **Export → Export to GCS** → destino `.../curated/train_sample.csv`, formato CSV.
+
+⌨️ **Equivalente en CLI:**
 ```bash
 export PROJECT_ID=$(gcloud config get-value project)
 export BUCKET="gs://${PROJECT_ID}-datalake"
@@ -176,17 +199,19 @@ bq extract --destination_format=CSV \
 gcloud storage cp "$BUCKET/curated/train_sample.csv" ~/fraudshield/ml/
 ls -lh ~/fraudshield/ml/train_sample.csv
 ```
+💡 Si trabajarás en un **notebook de Vertex AI** (§7), puedes saltarte la descarga local y leer el CSV directo desde GCS con `pd.read_csv("gs://.../train_sample.csv")`.
 
 ### ✅ Checkpoint 5
-Existe `~/fraudshield/ml/train_sample.csv` (~260k filas). Entiendes qué es la fuga de datos.
+Existe la tabla `fraud_dbt.train_sample` (~260k filas) y su CSV en GCS. Entiendes qué es la fuga de datos.
 
 ---
 
 ## 6. Bqml
 
-📖 **BigQuery ML** te deja **entrenar modelos con SQL**, sin mover datos ni montar infraestructura. Perfecto como baseline cloud-native (muy bien visto en Ceiba/GCP).
+📖 **BigQuery ML** te deja **entrenar modelos con SQL**, sin mover datos ni montar infraestructura. Perfecto como baseline cloud-native (muy bien visto en Ceiba/GCP). Todo esto es **por UI** en el editor de BigQuery.
 
 ### 6.1 — Entrenar una regresión logística (baseline)
+Pega en el editor de BigQuery y **RUN**:
 ```sql
 CREATE OR REPLACE MODEL `fraud_dbt.fraud_logreg`
 OPTIONS(
@@ -206,39 +231,51 @@ FROM `fraud_dbt.mart_fraud_features`;
 ```
 💡 `auto_class_weights = TRUE` es la forma de BQML de manejar el desbalanceo. Entrena en 1–3 min.
 
-### 6.2 — Evaluar el baseline
+### 6.2 — Evaluar el baseline (¡con gráficos automáticos!)
+
+🖱️ **Por la UI (lo más visual):** en el Explorer de BigQuery, expande `fraud_dbt` → **Models** → clic en `fraud_logreg`. Verás pestañas:
+- **EVALUATION:** precision, recall, F1, ROC-AUC, y **gráficas de curva ROC y precision-recall** ya dibujadas.
+- **Confusion matrix:** matriz TP/FP/FN/TN interactiva (puedes mover el umbral con un slider).
+
+⌨️ **Equivalente por SQL:**
 ```sql
 SELECT * FROM ML.EVALUATE(MODEL `fraud_dbt.fraud_logreg`);
-```
-Verás `precision`, `recall`, `f1_score`, `roc_auc`. 
-
-```sql
 SELECT * FROM ML.CONFUSION_MATRIX(MODEL `fraud_dbt.fraud_logreg`);
 ```
-Te da TP/FP/FN/TN. Anota el **recall** (cuánto fraude atrapa el baseline).
+Anota el **recall** (cuánto fraude atrapa el baseline) — es el número a superar.
 
 🔁 **En AWS:** el equivalente sería entrenar en **SageMaker** (o SageMaker Autopilot). BQML es la vía rápida en GCP; SageMaker es la de AWS.
 
 ### ✅ Checkpoint 6
-Tienes el modelo `fraud_logreg` evaluado, con su recall/precision anotados como **baseline a superar**.
+Tienes el modelo `fraud_logreg` evaluado (viste su pestaña EVALUATION), con su recall/precision anotados como **baseline a superar**.
 
 ---
 
 ## 7. Xgboost
 
-Ahora el modelo avanzado en Python: **XGBoost** con manejo explícito de desbalanceo, ajuste de umbral y explicabilidad. 
+Ahora el modelo avanzado en Python: **XGBoost** con manejo explícito de desbalanceo, ajuste de umbral y explicabilidad.
 
-> 💻 **Dónde correrlo:** funciona en **Cloud Shell** (la muestra es pequeña). Si quieres velocidad y entrenar con MÁS datos, córrelo en **tu PC local (RTX 4070 Super, 64 GB)** — mismo script, descargando el CSV. Aquí usamos Cloud Shell por simplicidad.
+> 💻 **Dónde correrlo (elige el más cómodo):**
+> - 🖱️ **Vertex AI Workbench (notebook, lo más visual)** — recomendado. Ves cada resultado (tablas, la gráfica SHAP) al instante, como Jupyter. Ver 7.1.
+> - **Cloud Shell** — funciona (la muestra es pequeña); corres el script con `python3`.
+> - **Tu PC local (RTX 4070 Super, 64 GB)** — para más velocidad/datos; mismo código.
 
-### 7.1 — Instalar dependencias
+### 7.1 — (Opción visual) Crear un notebook en Vertex AI Workbench 🖱️
+1. Consola → menú **☰** → **Vertex AI** → **Workbench**.
+2. Botón **CREATE** (instancia). Deja los valores por defecto (una máquina pequeña basta), región `us-central1` → **CREATE**. Tarda ~3 min.
+3. Cuando esté lista, clic en **OPEN JUPYTERLAB**.
+4. Dentro de JupyterLab: **File → New → Notebook** (kernel Python 3). Pega el código de 7.2 en celdas y ejecútalas con **Shift+Enter**. Verás las métricas y la gráfica SHAP en pantalla.
+5. ⚠️ **Al terminar, apaga la instancia** (Workbench → selecciona la instancia → **STOP**) para no gastar. Solo cobra mientras está encendida.
+
+### 7.2 — El código de entrenamiento
+Si usas notebook, pega esto por celdas. Si prefieres terminal, guárdalo como `~/fraudshield/ml/train.py` (por Open Editor o `cat >`) y córrelo con `python3 train.py`.
+
+Primero, instala dependencias (en una celda con `!` delante, o en la terminal):
 ```bash
 pip install --user xgboost scikit-learn imbalanced-learn shap matplotlib pandas pyarrow joblib
 ```
 
-### 7.2 — Crear el script de entrenamiento
-Crea `~/fraudshield/ml/train.py`:
-```bash
-cat > ~/fraudshield/ml/train.py << 'EOF'
+```python
 """
 Entrena un XGBoost de detección de fraude:
  - maneja desbalanceo con scale_pos_weight
@@ -264,6 +301,8 @@ import matplotlib.pyplot as plt
 
 ML_DIR = os.path.expanduser("~/fraudshield/ml")
 DATA = os.path.join(ML_DIR, "train_sample.csv")
+# En un notebook de Vertex AI puedes leer directo de GCS:
+# DATA = "gs://<TU_PROJECT_ID>-datalake/curated/train_sample.csv"
 
 # 1) Cargar datos
 df = pd.read_csv(DATA)
@@ -334,18 +373,16 @@ joblib.dump(
     os.path.join(ML_DIR, "fraud_model.joblib"),
 )
 print("Modelo guardado en fraud_model.joblib")
-EOF
 ```
 
 ### 7.3 — Ejecutar
-```bash
-cd ~/fraudshield/ml
-python3 train.py
-```
-Verás las métricas, el reporte de clasificación, la matriz de confusión, y se generarán `shap_summary.png` y `fraud_model.joblib`.
+- **Notebook:** ejecuta las celdas en orden (Shift+Enter). En un notebook, la gráfica SHAP se muestra en pantalla (puedes quitar el `matplotlib.use("Agg")` y usar `shap.summary_plot(..., show=True)`).
+- **Terminal:** `cd ~/fraudshield/ml && python3 train.py`.
+
+Se generan `shap_summary.png` y `fraud_model.joblib`.
 
 ### ✅ Checkpoint 7
-El script corre completo. Tienes **AUC-PR** del XGBoost (debería ser alto, >0.9 en este dataset) y archivos `fraud_model.joblib` + `shap_summary.png`.
+El código corre completo. Tienes **AUC-PR** del XGBoost (debería ser alto, >0.9 en este dataset) y archivos `fraud_model.joblib` + `shap_summary.png`.
 
 ---
 
@@ -362,7 +399,7 @@ Llena esta tabla con tus resultados:
 💡 El XGBoost debería **superar** al baseline. Si no, revisa features/umbral.
 
 ### 8.2 — Interpretar SHAP (explicabilidad para stakeholders)
-Abre `shap_summary.png` (en el editor de Cloud Shell, doble clic; o descárgalo). Muestra **qué features impulsan las predicciones de fraude**.
+Abre `shap_summary.png` (en el notebook se muestra sola; en Cloud Shell, doble clic en el editor; o descárgalo). Muestra **qué features impulsan las predicciones de fraude**.
 - Cada punto = una transacción; color = valor de la feature; posición = impacto en la predicción.
 - Esperas ver `drained_account_flag`, `balance_error_orig`, `is_high_risk_type`, `amount` entre las más influyentes.
 
@@ -383,6 +420,11 @@ Ya guardaste `fraud_model.joblib` (modelo + umbral + lista de features). Este ar
 
 💡 En el Manual 06 lo registrarás formalmente con **MLflow** (versionado, métricas, model registry). Por ahora basta el `.joblib`.
 
+🖱️ **Guardar copia en Cloud Storage (versionado de artefactos):** UI → Cloud Storage → bucket → carpeta `curated/models/` → **UPLOAD** el `.joblib`. O por CLI:
+```bash
+gcloud storage cp ~/fraudshield/ml/fraud_model.joblib "$BUCKET/curated/models/fraud_model.joblib"
+```
+
 🔁 **En AWS:** el artefacto se registraría en **SageMaker Model Registry**; el concepto (versionar el modelo + sus métricas) es idéntico.
 
 ### ✅ Checkpoint 9
@@ -392,19 +434,17 @@ Tienes `fraud_model.joblib` listo para producción.
 
 ## 10. Commit
 
-⚠️ El modelo (`.joblib`) y el CSV son binarios/datos: **no** los subimos a Git (ya están en `.gitignore` por `*.csv`; añade el joblib). Subimos el **código** y el reporte.
+⚠️ El modelo (`.joblib`) y el CSV son binarios/datos: **no** los subimos a Git. Subimos el **código**.
 
+🖱️ **Por la UI (VS Code):** Source Control → commit → push (asegúrate de que `.gitignore` excluye `ml/*.joblib`, `ml/*.png`, `ml/*.csv`).
+
+⌨️ **Por CLI:**
 ```bash
 cd ~/fraudshield
 printf '\n# Modelos y artefactos\nml/*.joblib\nml/*.png\nml/*.csv\n' >> .gitignore
-
 git add ml/train.py .gitignore
 git commit -m "Manual 04: modelado de fraude (BigQuery ML baseline + XGBoost con desbalanceo, umbral y SHAP)"
 git push origin main
-```
-💡 Opcional: guarda una copia del modelo en Cloud Storage (versionado de artefactos):
-```bash
-gcloud storage cp ~/fraudshield/ml/fraud_model.joblib "$BUCKET/curated/models/fraud_model.joblib"
 ```
 
 ### ✅ Checkpoint 10
@@ -416,10 +456,10 @@ En GitHub aparece `ml/train.py` (sin datos ni binarios).
 
 - [ ] Entiendo y puedo explicar CRISP-DM (6 fases).
 - [ ] Sé por qué la accuracy engaña y qué es AUC-PR.
-- [ ] EDA hecho: desbalanceo, fraude por tipo, separación de clases.
+- [ ] EDA hecho (en la consola de BigQuery): desbalanceo, fraude por tipo, separación de clases.
 - [ ] Reviso fuga de datos (excluí `step` y la marca del sistema antiguo).
 - [ ] Muestra de entrenamiento creada y exportada.
-- [ ] Baseline en **BigQuery ML** entrenado y evaluado.
+- [ ] Baseline en **BigQuery ML** entrenado y evaluado (viste la pestaña EVALUATION).
 - [ ] **XGBoost** entrenado con `scale_pos_weight`, AUC-PR y umbral ajustado.
 - [ ] **SHAP** generado e interpretado.
 - [ ] `fraud_model.joblib` guardado.
@@ -433,13 +473,14 @@ Si todo está ✅ → **listo para el Manual 04B: Fine-tuning local (PEFT) o el 
 
 | Problema | Causa | Solución |
 |---|---|---|
-| `MemoryError` en `train.py` | Muestra muy grande para Cloud Shell | Baja el muestreo (`RAND() < 0.02`) o corre en tu PC local. |
+| `MemoryError` en el entrenamiento | Muestra muy grande para Cloud Shell | Baja el muestreo (`RAND() < 0.02`), usa un notebook de Vertex AI, o tu PC local. |
 | BQML "Quota/billing" al entrenar | Modelo iterativo costoso | Usa `LOGISTIC_REG` (incluido); el XGBoost hazlo en Python (gratis). |
 | `shap` tarda mucho o falla | Cálculo pesado | Reduce la muestra SHAP (`min(1000, ...)`). |
 | AUC-PR sospechosamente perfecto (1.0) | Posible fuga de datos | Revisa que no entró `is_flagged_fraud` ni `step`. |
 | `xgboost` no instala | Dependencias | `pip install --user xgboost`; en local usa conda si falla. |
-| `bq extract` falla | Tabla muy grande para un archivo | Usa comodín: `.../train_sample_*.csv`. |
+| `bq extract` / Export falla | Tabla muy grande para un archivo | Usa comodín: `.../train_sample_*.csv`. |
 | Reporte con recall bajo | Umbral o desbalanceo | Ajusta umbral; sube `scale_pos_weight`; revisa features. |
+| Vertex AI Workbench sigue cobrando | La instancia quedó encendida | Workbench → instancia → **STOP** al terminar. |
 
 ---
 
@@ -458,6 +499,7 @@ Si todo está ✅ → **listo para el Manual 04B: Fine-tuning local (PEFT) o el 
 - **XGBoost:** modelo de ensemble (gradient boosting) potente y estándar.
 - **SHAP:** método para explicar predicciones (qué feature pesó y cuánto).
 - **BigQuery ML:** entrenar modelos con SQL dentro de BigQuery.
+- **Vertex AI Workbench:** notebooks Jupyter gestionados en GCP (la vía visual para Python/ML).
 
 ---
 
