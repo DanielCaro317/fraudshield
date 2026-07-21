@@ -359,20 +359,29 @@ Vamos a hacer que un modelo **te responda** de tres formas: consola, CLI y Pytho
 
 🖱️ Bedrock → panel izquierdo **Playgrounds** → **Chat / Text**. Elige un modelo **Claude**. Escribe *"Hola, responde en una frase para probar que funcionas."* y **Run**. Debe contestar.
 
-> ⚠️ **ELIGE BIEN EL MODELO — esto te va a ahorrar un dolor de cabeza.**
->
-> Bedrock aplica **cuotas por modelo y por región**: peticiones/minuto, tokens/minuto y **tokens por día**. Los modelos **más potentes (familia Opus) traen las cuotas por defecto MÁS BAJAS**, sobre todo en cuentas nuevas. Si haces las pruebas con un Opus, agotarás el límite diario en pocas consultas y verás:
+> 🚨 **SI NINGÚN MODELO TE RESPONDE Y VES ESTO DESDE EL PRIMER INTENTO, LEE ESTO:**
 >
 > ```
 > ThrottlingException: Too many tokens per day, please wait before trying again.
 > ```
 >
-> **Para TODO este proyecto usa la familia `Haiku`** (o `Sonnet` si necesitas más calidad). Razones:
-> - Cuotas por defecto **mucho más altas** → no te bloqueas.
-> - **Mucho más barato** por token (cuidas tus créditos).
-> - Para un RAG sobre políticas bancarias, **Haiku sobra**: la calidad de la respuesta la determina sobre todo tu *retrieval*, no el tamaño del modelo generador.
+> **No significa que hayas gastado mucho.** Significa que superaste tu **límite diario de tokens** — y en una **cuenta AWS nueva ese límite puede ser 0 o casi 0**, así que *cualquier* petición lo supera. Es el tropiezo #1 al empezar con Bedrock y **no es culpa tuya ni de tu configuración**.
 >
-> 💡 Reserva un modelo Opus solo para una **demo final** puntual, si acaso. Las cuotas son **independientes por modelo**: si agotas Opus, puedes seguir trabajando con Haiku el mismo día.
+> **Cómo confirmarlo:** Consola → **Service Quotas** → **AWS services** → **Amazon Bedrock** → busca la métrica *"tokens per day"* del modelo → mira **Applied account-level quota value**. Si es **0** o diminuto, es esto.
+>
+> **La única solución real:** pedir un aumento de cuota — en esa misma pantalla, **Request quota increase**. Puede tardar de **horas a varios días**, y en cuentas nuevas a veces aprueban menos de lo pedido.
+>
+> **Antes de rendirte, prueba también:**
+> - **Otra región** (`us-west-2`): las cuotas son *por región*.
+> - Que la cuenta esté **totalmente activada**: Billing → Payment methods (una cuenta recién creada puede tardar **hasta 24 h**).
+> - Un **inference profile** cross-región (`us.anthropic...`) en vez del ID base.
+>
+> ### 🚦 NO detengas tu aprendizaje esperando la aprobación
+> La lógica del RAG (chunking, embeddings, retrieval, hybrid search, re-ranking, evaluación) es **idéntica** con cualquier proveedor de LLM. Desarrolla con **Ollama en tu PC** (gratis) o con otro proveedor, y **cambia el generador a Bedrock cuando te aprueben la cuota**. Solo se toca la capa del modelo; el resto del proyecto no cambia.
+
+> 💡 **Y cuando ya tengas cuota: elige el modelo correcto.** Usa la familia **`Haiku`** (o `Sonnet` si necesitas más calidad), **no** un `Opus`:
+> - Los modelos premium (Opus) traen las **cuotas más bajas** y cuestan mucho más por token.
+> - Para un RAG sobre políticas bancarias, **Haiku sobra**: la calidad de la respuesta la determina sobre todo tu **retrieval**, no el tamaño del modelo generador. ← *buen argumento de entrevista.*
 
 💡 **Truco de oro:** en el Playground suele haber un botón **"View API request"** que te muestra el **JSON exacto** y el **modelId** para llamar ese modelo por API. **Cópialo**: ese `modelId` es el que usarás en CLI/Python (y evita adivinar IDs que cambian).
 
@@ -476,7 +485,8 @@ Si marcaste todo: **tu entorno AWS está listo.** El siguiente manual construye 
 | `Could not connect to the endpoint URL` | Región equivocada | `--region us-east-1` en todo |
 | `Unable to locate credentials` | Sesión SSO caducó | `aws sso login --profile copilot` |
 | `ValidationException` con el modelId | ID incorrecto o requiere inference profile | Copia el `modelId` del botón "View API request" del Playground |
-| **`ThrottlingException: Too many tokens per day`** | Agotaste la **cuota diaria de tokens** de ESE modelo (típico con la familia **Opus**, que trae las cuotas más bajas) | **1)** Cambia a un modelo **Haiku/Sonnet** — las cuotas son por modelo, así que puedes seguir hoy mismo. **2)** La cuota diaria se restablece (~24 h). **3)** Si de verdad necesitas más: **Service Quotas** → busca *Bedrock* → la métrica del modelo → **Request quota increase** (tarda de horas a varios días y en cuentas nuevas pueden aprobar menos de lo pedido). **No bloquees tu avance esperando la aprobación.** |
+| **`ThrottlingException: Too many tokens per day` y NINGÚN modelo funciona nunca** | **Cuenta nueva con cuota 0 (o casi).** No gastaste nada: tu límite diario es tan bajo que cualquier petición lo supera | Confirma en **Service Quotas → Amazon Bedrock →** métrica *tokens per day* → **Applied account-level quota value**. Si es 0: **Request quota increase** (tarda horas o días). Prueba además `us-west-2`, que la cuenta esté activada (Billing → Payment methods, hasta 24 h) y un *inference profile* `us.anthropic...`. **Mientras tanto desarrolla con Ollama local** — ver §10.1 |
+| `ThrottlingException` tras un rato usándolo bien | Ahí sí agotaste la cuota diaria de ese modelo | Espera al reset (~24 h) o usa otro modelo; las cuotas son por modelo y región |
 | `ThrottlingException` con "requests/tokens per minute" | Vas muy rápido (ráfaga de llamadas) | Espera unos segundos y reintenta; en código añade reintentos con *backoff* exponencial |
 | Claude no aparece en Model access | Región sin Claude | Cambia a `us-east-1` / `us-west-2` |
 | Miedo a la factura | OpenSearch/servicios encendidos | Revisa **Budgets** y **borra** recursos al terminar cada sesión (te aviso en cada manual) |
