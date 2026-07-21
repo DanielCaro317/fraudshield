@@ -20,9 +20,9 @@ Basada en el diagnóstico de aprendizaje (`../../docs/planeacion/`): **RAG esenc
 | 03 | [Retrieve / RetrieveAndGenerate con boto3](./03_retrieve_generate_boto3.md) | `RetrieveAndGenerate` (gestionado) vs `Retrieve` + `Converse` (controlado), **filtros por metadata**, búsqueda híbrida, citas, lógica de rechazo, sesiones | ✅ |
 | 04 | [**Guardrails + seguridad (Bedrock)**](./04_guardrails_seguridad.md) 🔒 | **Bedrock Guardrails** completo (6 políticas): content filters, prompt-attack, denied topics, PII, **contextual grounding**, automated reasoning + **ApplyGuardrail** + defensa en profundidad (OWASP LLM, IAM mínimo, logging, aislamiento del contexto) | ✅ |
 | 05 | [Evaluación del RAG](./05_evaluacion_dataset.md) | Dataset dorado (respondibles/no/ambiguas/adversariales/metadata). Métricas **retrieval** (hit rate, MRR) vs **generación** (faithfulness, relevancia, citas, rechazo) con **Bedrock Evaluations** + **RAGAS**, eval de Guardrails (FP/FN) y operación (p50/p95, tokens, costo) | ✅ |
-| 06 | LangChain sobre Bedrock | Reimplementar el mismo RAG con `ChatBedrockConverse`, `BedrockEmbeddings`, `AmazonKnowledgeBasesRetriever`, chains (LCEL) + tracing. Comparar boto3 nativo vs LangChain | ⏳ |
-| 07 | Despliegue real | API Gateway → Lambda → Bedrock/KB, IaC (**CDK o Terraform**), CloudWatch (logs/métricas/costo), CI/CD, manejo de errores/timeouts/retries | ⏳ |
-| 08 | Portabilidad a GCP 🔁 | Portar el mismo sistema: S3→Cloud Storage, Bedrock→Vertex/Gemini, KB→Vertex AI RAG Engine, Guardrails→Model Armor, CloudWatch→Cloud Logging. **El puente multi-cloud** | ⏳ |
+| 06 | [LangChain sobre Bedrock](./06_langchain_sobre_bedrock.md) | Reimplementar el mismo RAG con `ChatBedrockConverse`, `BedrockEmbeddings`, `AmazonKnowledgeBasesRetriever`, chains (**LCEL**) + tracing (**LangSmith**). Comparar boto3 nativo vs LangChain (ramas /native y /langchain) | ✅ |
+| 07 | [Despliegue en producción](./07_despliegue_produccion.md) | API Gateway → Lambda → Bedrock/KB, IaC (**CDK o Terraform**), IAM mínimo, CloudWatch, **streaming**, errores/timeouts/retries, **CI/CD con eval-gates** (OIDC), DevOps/MLOps/LLMOps | ✅ |
+| 08 | [Portabilidad a GCP](./08_portabilidad_a_gcp.md) 🔁 | Portar el mismo sistema: S3→Cloud Storage, Bedrock→Vertex/Gemini, KB→**Vertex AI RAG Engine**, OpenSearch→**Vector Search 2.0**, Guardrails→**Model Armor**, Lambda→Cloud Run. **El puente multi-cloud** | ✅ |
 
 > ✅ = disponible · ⏳ = en construcción
 >
