@@ -359,6 +359,21 @@ Vamos a hacer que un modelo **te responda** de tres formas: consola, CLI y Pytho
 
 🖱️ Bedrock → panel izquierdo **Playgrounds** → **Chat / Text**. Elige un modelo **Claude**. Escribe *"Hola, responde en una frase para probar que funcionas."* y **Run**. Debe contestar.
 
+> ⚠️ **ELIGE BIEN EL MODELO — esto te va a ahorrar un dolor de cabeza.**
+>
+> Bedrock aplica **cuotas por modelo y por región**: peticiones/minuto, tokens/minuto y **tokens por día**. Los modelos **más potentes (familia Opus) traen las cuotas por defecto MÁS BAJAS**, sobre todo en cuentas nuevas. Si haces las pruebas con un Opus, agotarás el límite diario en pocas consultas y verás:
+>
+> ```
+> ThrottlingException: Too many tokens per day, please wait before trying again.
+> ```
+>
+> **Para TODO este proyecto usa la familia `Haiku`** (o `Sonnet` si necesitas más calidad). Razones:
+> - Cuotas por defecto **mucho más altas** → no te bloqueas.
+> - **Mucho más barato** por token (cuidas tus créditos).
+> - Para un RAG sobre políticas bancarias, **Haiku sobra**: la calidad de la respuesta la determina sobre todo tu *retrieval*, no el tamaño del modelo generador.
+>
+> 💡 Reserva un modelo Opus solo para una **demo final** puntual, si acaso. Las cuotas son **independientes por modelo**: si agotas Opus, puedes seguir trabajando con Haiku el mismo día.
+
 💡 **Truco de oro:** en el Playground suele haber un botón **"View API request"** que te muestra el **JSON exacto** y el **modelId** para llamar ese modelo por API. **Cópialo**: ese `modelId` es el que usarás en CLI/Python (y evita adivinar IDs que cambian).
 
 ### 10.2 — Por CLI (Converse API — la moderna y unificada)
@@ -461,6 +476,8 @@ Si marcaste todo: **tu entorno AWS está listo.** El siguiente manual construye 
 | `Could not connect to the endpoint URL` | Región equivocada | `--region us-east-1` en todo |
 | `Unable to locate credentials` | Sesión SSO caducó | `aws sso login --profile copilot` |
 | `ValidationException` con el modelId | ID incorrecto o requiere inference profile | Copia el `modelId` del botón "View API request" del Playground |
+| **`ThrottlingException: Too many tokens per day`** | Agotaste la **cuota diaria de tokens** de ESE modelo (típico con la familia **Opus**, que trae las cuotas más bajas) | **1)** Cambia a un modelo **Haiku/Sonnet** — las cuotas son por modelo, así que puedes seguir hoy mismo. **2)** La cuota diaria se restablece (~24 h). **3)** Si de verdad necesitas más: **Service Quotas** → busca *Bedrock* → la métrica del modelo → **Request quota increase** (tarda de horas a varios días y en cuentas nuevas pueden aprobar menos de lo pedido). **No bloquees tu avance esperando la aprobación.** |
+| `ThrottlingException` con "requests/tokens per minute" | Vas muy rápido (ráfaga de llamadas) | Espera unos segundos y reintenta; en código añade reintentos con *backoff* exponencial |
 | Claude no aparece en Model access | Región sin Claude | Cambia a `us-east-1` / `us-west-2` |
 | Miedo a la factura | OpenSearch/servicios encendidos | Revisa **Budgets** y **borra** recursos al terminar cada sesión (te aviso en cada manual) |
 
