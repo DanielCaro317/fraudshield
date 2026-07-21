@@ -5,6 +5,10 @@
 > **Tiempo estimado:** 2–3 horas.
 > **Lo único que necesitas en tu PC:** un navegador web (Chrome recomendado) y una cuenta de Google (Gmail).
 
+> ⚠️ **Métodos vigentes a jul-2026** (ver [§15 Fuentes](#15-fuentes)). Donde una consola pueda haber cambiado, te doy también la **ruta por menú** y el **comando CLI**, más estables.
+>
+> 🔀 **Este proyecto es 100% GCP.** El entorno y la práctica de **AWS** viven ahora en el proyecto hermano **[`aws-banking-copilot/`](../../aws-banking-copilot/manuales/00_entorno_aws.md)** (cuenta AWS, IAM Identity Center, Bedrock, Guardrails). Aquí no montas AWS; solo dejamos un **mapa mental GCP↔AWS** para entrevistas (§11B).
+
 ---
 
 ## 🖱️ / ⌨️ Cómo leer este manual (UI + CLI)
@@ -33,10 +37,11 @@ Este manual está escrito en formato **doble camino**, pensado para que vayas tr
 9. [Conectar Cloud Shell con GitHub](#9-conectar-github)
 10. [Crear la estructura del proyecto](#10-estructura)
 11. [Primer commit](#11-commit)
-11B. [Parte B — Multi-cloud (AWS) y entorno local 🆕](#11b-parte-b--multi-cloud-aws-y-entorno-local)
+11B. [Entorno local y nota multi-cloud](#11b-entorno-local-y-nota-multi-cloud)
 12. [✅ Checklist final del Manual 00](#12-checklist)
 13. [🛟 Solución de problemas](#13-troubleshooting)
 14. [📖 Glosario](#14-glosario)
+15. [🔗 Fuentes (verificadas jul-2026)](#15-fuentes)
 
 ---
 
@@ -407,17 +412,11 @@ Recarga `https://github.com/<tu_usuario>/fraudshield` en el navegador: deben apa
 
 ---
 
-## 11B. Parte B — Multi-cloud (AWS) y entorno local
+## 11B. Entorno local y nota multi-cloud
 
-> 🆕 **Fusión Proxify:** el cargo de Proxify pide **multi-cloud (AWS/GCP/Azure)** y valora **agentes/fine-tuning** (donde tu GPU local brilla). GCP sigue siendo tu base; AWS lo aprendes **por equivalencia** y lo usarás en el Manual 07 para una demo. El entorno local (Ollama + Docker) lo usarás para desarrollar RAG/agentes/fine-tuning **gratis**.
+> 🔀 **Multi-cloud, ahora en dos proyectos.** El setup y la práctica de **AWS** (cuenta, IAM Identity Center, CloudShell, Bedrock, Guardrails) viven en el proyecto hermano **[`aws-banking-copilot/`](../../aws-banking-copilot/manuales/00_entorno_aws.md)** — mucho más completo que la vieja "Parte B". Aquí dejamos solo: (a) el **mapa mental GCP↔AWS** para entrevistas, y (b) tu **entorno local** (Ollama/Docker/GPU) para desarrollar RAG, agentes y fine-tuning **gratis**.
 >
-> 💡 Esta Parte B **no bloquea** el Manual 01. Puedes hacerla ahora o cuando llegues a los Manuales 04B/05/07. Pero déjala lista temprano.
-
-### 11B.1 — Cuenta AWS (free tier) — por UI
-1. Ve a **https://aws.amazon.com/free** → **"Create a Free Account"**.
-2. Email, nombre de cuenta, verifica. Tipo **Personal**. Ingresa tarjeta (verificación; free tier 12 meses + servicios siempre gratis).
-3. Elige el plan de soporte **Basic (gratis)**.
-4. Entra a la **consola AWS** (`https://console.aws.amazon.com/`).
+> 💡 Esta parte **no bloquea** el Manual 01.
 
 💡 **Equivalencias mentales GCP ↔ AWS** (memorízalas, son oro en entrevista):
 
@@ -434,17 +433,9 @@ Recarga `https://github.com/<tu_usuario>/fraudshield` en el navegador: deben apa
 | Registro de imágenes | Artifact Registry | **ECR** |
 | Kubernetes gestionado | GKE | **EKS** |
 
-### 11B.2 — AWS CloudShell y CLI (sin instalar nada)
-Igual que GCP, AWS tiene terminal en el navegador:
-1. En la consola AWS, arriba a la derecha, clic en el ícono **CloudShell** (`>_`).
-2. Verifica que la CLI está lista:
-```bash
-aws --version
-aws sts get-caller-identity   # muestra tu cuenta
-```
-💡 No profundizamos en AWS ahora; basta con tener la cuenta y saber abrir su CloudShell. El uso real llega en el Manual 07 (despliegue alternativo en AWS) y Manual 05 (Bedrock como proveedor de LLM opcional).
+> 👉 **Para el hands-on de AWS** (crear la cuenta, IAM Identity Center, CloudShell, habilitar modelos Bedrock, Guardrails) ve al **[Manual 00 del proyecto AWS](../../aws-banking-copilot/manuales/00_entorno_aws.md)**. Está actualizado (jul-2026) y usa los métodos vigentes (nada de access keys de larga duración).
 
-### 11B.3 — Entorno LOCAL (tu PC: RTX 4070 Super, Ryzen 7900, 64 GB)
+### 11B.1 — Entorno LOCAL (tu PC: RTX 4070 Super, Ryzen 7900, 64 GB)
 Esto lo instalas **en tu computador**, no en Cloud Shell. Te servirá para desarrollar RAG/agentes/fine-tuning gratis.
 
 1. **VS Code** — https://code.visualstudio.com/ + extensiones: Python, Jupyter, Docker, GitLens.
@@ -472,9 +463,9 @@ Esto lo instalas **en tu computador**, no en Cloud Shell. Te servirá para desar
    ```
 
 ### ✅ Checkpoint 11B
-- Cuenta AWS creada; `aws sts get-caller-identity` funciona en AWS CloudShell.
 - En tu PC: VS Code, Git, Docker Desktop instalados.
 - `ollama run llama3.1:8b "test"` responde usando tu GPU.
+- (AWS) → se valida en el [proyecto AWS](../../aws-banking-copilot/manuales/00_entorno_aws.md), no aquí.
 
 🛟 *Ollama no usa la GPU:* actualiza drivers NVIDIA; Ollama detecta CUDA automáticamente. *Docker Desktop no arranca:* habilita WSL2/virtualización en BIOS.
 
@@ -495,11 +486,11 @@ Marca todo antes de pasar al Manual 01:
 - [ ] Estructura de carpetas creada (incluye `agents/ finetune/ eval/ infra/`).
 - [ ] Primer commit visible en GitHub.
 
-**Parte B (puede hacerse ahora o más adelante, antes de los Manuales 04B/05/07):**
-- [ ] Cuenta AWS creada y AWS CloudShell accesible.
-- [ ] Entendí las equivalencias GCP↔AWS.
+**Entorno local + multi-cloud (puede hacerse ahora o antes de los Manuales 04B/05):**
+- [ ] Entiendo las equivalencias **GCP↔AWS** (§11B).
 - [ ] Entorno local listo (VS Code, Git, Docker Desktop).
 - [ ] Ollama corriendo en tu GPU (LLM + embeddings).
+- [ ] (AWS hands-on) lo haré en el proyecto **[aws-banking-copilot](../../aws-banking-copilot/)** cuando toque.
 
 Si lo obligatorio está ✅ → **estás listo para el Manual 01: Ingesta de datos y Data Lake.**
 
@@ -536,6 +527,20 @@ Si lo obligatorio está ✅ → **estás listo para el Manual 01: Ingesta de dat
 - **PAT (Personal Access Token):** token que reemplaza la contraseña para autenticarte en GitHub por CLI.
 - **Región/Zona:** ubicación física de los servidores donde corren tus recursos.
 - **`.gitignore`:** archivo que le dice a Git qué NO subir (ej. credenciales, temporales).
+
+---
+
+## 15. Fuentes
+
+Verificadas el **21 de julio de 2026** (si algo cambia, aquí está la fuente oficial):
+
+- Prueba gratuita de Google Cloud (USD 300 / 90 días) — [cloud.google.com/free](https://cloud.google.com/free)
+- Presupuestos y alertas (Budgets) — [cloud.google.com/billing/docs/how-to/budgets](https://cloud.google.com/billing/docs/how-to/budgets)
+- Cloud Shell y editor — [cloud.google.com/shell/docs](https://cloud.google.com/shell/docs)
+- Habilitar APIs (`gcloud services enable`) — [cloud.google.com/sdk/gcloud/reference/services/enable](https://cloud.google.com/sdk/gcloud/reference/services/enable)
+- Autenticación en GitHub (token/`gh`/navegador) — [docs.github.com/authentication](https://docs.github.com/en/authentication)
+
+🔁 Setup equivalente en AWS → [proyecto aws-banking-copilot, Manual 00](../../aws-banking-copilot/manuales/00_entorno_aws.md).
 
 ---
 
