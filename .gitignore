@@ -42,6 +42,10 @@ agents/*.csv
 # === Material de trabajo previo (scratch, no forma parte del proyecto) ===
 proxify/
 
+# === Temporales de Microsoft Office (se crean al abrir un .docx) ===
+~$*
+*.tmp
+
 # === Sistema operativo ===
 .DS_Store
 Thumbs.db
