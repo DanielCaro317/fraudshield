@@ -1,30 +1,40 @@
-# FraudShield 🛡️🏦
+# 🛡️🏦 Banking Fraud & AI — Portafolio de dos proyectos (AWS + GCP)
 
-Plataforma cloud-native de **detección de fraude bancario (Datos + IA)** para un departamento antifraude, construida en **Google Cloud Platform**.
+> Repositorio-portafolio con **dos proyectos complementarios del mismo dominio (banca / fraude)**, cada uno enfocado en una nube y una metodología distinta, que **juntos** cubren todo el perfil que busco demostrar: **AI Engineering de producción (RAG/LLM/agentes)** y **Data Engineering + ML clásico**.
 
-## Caso de uso
-Analiza millones de transacciones bancarias para detectar fraude, y permite a los analistas hacer **consultas semánticas y cualitativas** (en lenguaje natural) sobre narrativas de casos y quejas de clientes.
+## 🎯 Por qué dos proyectos y no uno
 
-## Arquitectura
-Kaggle/CFPB (transacciones + quejas) → Cloud Storage (Data Lake) → BigQuery (Data Warehouse) → dbt (ELT, features de fraude) → Airflow (orquestación) → Vertex AI (modelo de detección de fraude + RAG) → Cloud Run (API de scoring + chat) → React (dashboard antifraude).
+No son el mismo producto: son dos sistemas que se complementan y comparten el dominio bancario/fraude. Separarlos deja que **cada uno sea profundo en su carril** en vez de dos cosas superficiales.
 
-## Stack
-Python · SQL · BigQuery · dbt · Apache Airflow (Cloud Composer) · scikit-learn / XGBoost · Vertex AI · RAG (embeddings + vector search) · FastAPI · Docker · Cloud Run · React.
+| | [`aws-banking-copilot/`](./aws-banking-copilot/) | [`gcp-fraudshield/`](./gcp-fraudshield/) |
+|---|---|---|
+| **Producto** | *Banking Policy Copilot* — asistente RAG sobre políticas, procedimientos y tipologías de fraude | *FraudShield* — plataforma de detección de fraude transaccional + ML |
+| **Núcleo técnico** | Bedrock Knowledge Bases · OpenSearch Serverless · **Guardrails** · evaluación · LangChain-sobre-Bedrock | dbt · Airflow · BigQuery ML · XGBoost · Vertex AI |
+| **Metodología** | RAG-engineering / LLM en producción / defensa-en-profundidad | Data-eng / MLOps / CRISP-DM |
+| **Nube** | **AWS** (con capítulo de portabilidad a GCP) | **GCP** |
+| **Vacante que ataca** | Senior AI Engineer (Proxify) · roles "AWS GenAI/RAG Engineer" | Ingeniero ML (Ceiba, GCP-favorable) |
 
-## Estructura
-- `extract/` — ingesta de transacciones y quejas al Data Lake
-- `dbt_project/` — transformaciones ELT y features de fraude
-- `dags/` — pipelines de Airflow
-- `notebooks/` — EDA y modelado de detección de fraude
-- `ml/` — entrenamiento del modelo de fraude
-- `finetune/` — fine-tuning local (LoRA/QLoRA)
-- `rag/` — asistente de consultas semánticas/cualitativas (RAG)
-- `agents/` — Agente Investigador de Fraude (LangGraph)
-- `eval/` — evaluación de RAG/LLM (RAGAS)
-- `api/` — API de scoring + chat (FastAPI)
-- `frontend/` — dashboard antifraude (React)
-- `infra/` — infraestructura como código (Terraform)
-- `docs/` — documentación y decisiones de arquitectura
+## 🗣️ La narrativa (un solo relato, dos pitches)
 
-## Estado
-🚧 En construcción — siguiendo metodología CRISP-DM.
+> *"He construido dos sistemas de banca antifraude: una **plataforma de detección de fraude transaccional con ML en GCP** (dbt, Airflow, BigQuery ML, XGBoost) y un **copilot de políticas bancarias basado en RAG en AWS** (Bedrock Knowledge Bases, OpenSearch, Guardrails, evaluación rigurosa), que además porté a GCP para comparar Bedrock↔Vertex y Guardrails↔Model Armor."*
+
+- Para **Ceiba** → resalto: data engineering, dbt/Airflow, ML, GCP, CRISP-DM. → [`gcp-fraudshield/`](./gcp-fraudshield/)
+- Para **Proxify / AWS** → resalto: RAG evaluado, Bedrock nativo, Guardrails, seguridad de IA, portabilidad multi-cloud. → [`aws-banking-copilot/`](./aws-banking-copilot/)
+
+## 📂 Estructura del repo
+
+```
+.
+├── aws-banking-copilot/     ← Proyecto 1: RAG/Bedrock/Guardrails (AWS)  [EN CONSTRUCCIÓN 🚧]
+│   └── manuales/            ← manuales nuevos, extensos, paso a paso (UI + CLI)
+├── gcp-fraudshield/         ← Proyecto 2: Data + ML (GCP)  [manuales 00–05B listos]
+│   └── manuales/
+└── docs/                    ← COMPARTIDO: planeación, diagnóstico, prep entrevistas, job specs
+```
+
+## 🧭 Estado y punto actual
+
+- **GCP (FraudShield):** entorno montado (Manual 00 ✅). Voy por el **Manual 01** (ingesta). Manuales 00–05B escritos.
+- **AWS (Banking Copilot):** proyecto nuevo. Empezando por el entorno (Manual 00). Todos los manuales son nuevos.
+
+> 📄 Diagnóstico y estrategia de aprendizaje: [`docs/planeacion/`](./docs/planeacion/) (incluye el análisis del "Camino en IA y RAG" y los planes Ceiba/Proxify).
