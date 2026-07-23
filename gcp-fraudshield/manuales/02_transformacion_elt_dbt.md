@@ -65,6 +65,8 @@
 
 🔁 **En AWS:** dbt funciona igual; solo cambias el *adapter* (`dbt-redshift`, `dbt-snowflake`, `dbt-athena`) y el `profiles.yml`. Los modelos SQL son casi idénticos. Por eso dbt es una habilidad **portable entre nubes**.
 
+> 🧭 **¿Y si ya construí las capas staging/curated "a mano" con SQL?** Es un ejercicio válido y educativo, pero en este proyecto **dbt es el dueño del medallion** — no lo hacemos a mano. Razones: (1) **dbt es la herramienta que Ceiba pide explícitamente** y una keyword de tu CV; (2) es **reproducible, versionado y testeado** (con SQL suelto no); (3) el **lineage** se dibuja solo. Si creaste datasets manuales (`fraud_staging`, `fraud_curated`, …), déjalos como práctica o bórralos: dbt reconstruye esas capas mejor en su propio dataset `fraud_dbt`. En este manual **incorporamos las buenas ideas de ese enfoque manual** (limpieza de fechas/booleanos, columna de trazabilidad `fraud_match_source`, timestamps de auditoría, **partición + clustering**) pero **dentro de dbt**.
+
 ---
 
 ## 2. Que es dbt
@@ -253,19 +255,37 @@ select * from renamed
 ```
 
 ### Paso 6.2 — `models/staging/stg_complaints.sql`
+Limpieza **técnica** (sin regla de negocio): normaliza texto (`TRIM` + vacío→`NULL`), parsea fechas y convierte los `Yes/No` a booleanos. Añade un timestamp de auditoría.
 ```sql
--- Limpieza de las quejas de clientes (texto no estructurado).
--- Nota: ajusta los nombres de columna si tu carga difiere (revisa en la consola de BigQuery
--- el esquema de fraud_raw.complaints).
+-- staging de quejas: limpieza técnica de fraud_raw.complaints.
+-- Nota: ajusta los nombres de columna si tu carga difiere (revisa el esquema en la consola).
 with source as (
     select * from {{ source('fraud_raw', 'complaints') }}
 )
 
 select
-    *
+    -- Fecha: tolera los dos formatos comunes de CFPB (ISO o MM/DD/YYYY).
+    -- El cast a string hace que funcione tanto si autodetect la dejó DATE como STRING.
+    coalesce(
+      safe.parse_date('%Y-%m-%d', nullif(trim(cast(date_received as string)), '')),
+      safe.parse_date('%m/%d/%Y', nullif(trim(cast(date_received as string)), ''))
+    )                                              as date_received,
+    nullif(trim(product), '')                      as product,
+    nullif(trim(sub_product), '')                  as sub_product,
+    nullif(trim(issue), '')                        as issue,
+    nullif(trim(sub_issue), '')                    as sub_issue,
+    nullif(trim(consumer_complaint_narrative), '') as consumer_complaint_narrative,
+    nullif(trim(company), '')                      as company,
+    nullif(trim(state), '')                        as state,
+    nullif(trim(zip_code), '')                     as zip_code,
+    nullif(trim(submitted_via), '')                as submitted_via,
+    -- Yes/No -> BOOL (limpieza de tipos)
+    case lower(nullif(trim(timely_response), ''))
+        when 'yes' then true when 'no' then false else null end as timely_response,
+    current_timestamp()                            as _staged_at    -- marca de auditoría
 from source
 ```
-💡 Dejamos `stg_complaints` simple; lo usará el RAG (Manual 05). Si quieres, más adelante seleccionas solo las columnas relevantes (fecha, producto, issue, narrativa).
+💡 **Staging vs curated (concepto senior):** aquí solo limpiamos *técnicamente* y **conservamos todas las filas**; la regla de negocio (filtrar/clasificar por fraude) va en la capa siguiente. Añade más columnas (`complaint_id`, `consumer_disputed`, `tags`…) si las necesitas — el patrón `nullif(trim(...), '')` es el mismo.
 
 ### Paso 6.3 — Construir la capa staging (terminal)
 ```bash
@@ -403,6 +423,55 @@ bq query --use_legacy_sql=false \
 ### ✅ Checkpoint 8
 `fraud_dbt.mart_fraud_features` es una **tabla** con ~6.3M filas y la columna `is_fraud`. Esta es la entrada del Manual 04.
 
+### Paso 8.3 — Mart de quejas curadas: `models/marts/mart_fraud_complaints.sql`
+
+Un segundo mart, esta vez para las **quejas** (lo consumirá el RAG del Manual 05). Añade la **regla de negocio** que faltaba: una columna de **trazabilidad** `fraud_match_source` (¿dónde se detectó la señal de fraude?), y se materializa como **tabla particionada por mes y agrupada (clustered)** — dos optimizaciones de rendimiento/costo de nivel senior.
+
+```sql
+-- Config de dbt: tabla PARTICIONADA por mes + CLUSTERED. Nivel senior.
+-- ⚠️ Partición MENSUAL (no diaria): CFPB abarca años y una partición por día
+--    supera el límite de 4000 particiones de BigQuery.
+{{ config(
+    materialized='table',
+    partition_by={'field': 'date_received', 'data_type': 'date', 'granularity': 'month'},
+    cluster_by=['product', 'issue', 'state']
+) }}
+
+with clean as (
+    select * from {{ ref('stg_complaints') }}
+)
+
+select
+    *,
+    -- Trazabilidad: ¿dónde apareció la señal de fraude? (auditoría/explicabilidad)
+    case
+      when regexp_contains(lower(concat(coalesce(issue,''), ' ', coalesce(sub_issue,''))),
+             r'\b(fraud\w*|scam\w*|unauthorized|identity theft|stolen)\b')
+        then 'issue_or_sub_issue'
+      when regexp_contains(lower(concat(coalesce(product,''), ' ', coalesce(sub_product,''))),
+             r'\b(fraud\w*|scam\w*|unauthorized|identity theft|stolen)\b')
+        then 'product_or_sub_product'
+      else 'consumer_narrative'
+    end                    as fraud_match_source,
+    current_timestamp()    as _curated_at
+from clean
+where consumer_complaint_narrative is not null
+```
+💡 **Por qué partición + clustering (guion de entrevista):** *"Particiono por mes y agrupo (cluster) por `product/issue/state` para que las consultas que filtran por fecha o categoría **escaneen menos datos** — en BigQuery eso es directamente **menos costo y más velocidad**. Uso partición mensual porque la diaria excedería el límite de 4.000 particiones con datos de varios años."*
+
+💡 **La columna `fraud_match_source`** hace **auditable** por qué una queja entró como candidata de fraude (en la narrativa, en el `issue`, o en el `product`) — trazabilidad, clave en banca.
+
+Construye y verifica:
+```bash
+dbt run --select mart_fraud_complaints
+```
+🖱️ En BigQuery, clic en la tabla `fraud_dbt.mart_fraud_complaints` → pestaña **DETAILS**: verás que dice **Partitioned by** `date_received (MONTH)` y **Clustered by** `product, issue, state`.
+
+> 💡 **Para el RAG (Manual 05):** puedes apuntar el RAG a esta tabla curada `fraud_dbt.mart_fraud_complaints` (más limpia y con trazabilidad) en lugar de `fraud_raw.complaints`. Ambas sirven; esta es la versión "gold".
+
+### ✅ Checkpoint 8.3
+`fraud_dbt.mart_fraud_complaints` existe, está **particionada por mes y clustered**, y tiene la columna `fraud_match_source`.
+
 ---
 
 ## 9. Tests
@@ -538,9 +607,10 @@ En GitHub aparece la carpeta `dbt_project/` con tus modelos y tests.
 - [ ] `dbt-bigquery` instalado; `dbt debug` → "All checks passed!".
 - [ ] `profiles.yml` y `dbt_project.yml` configurados.
 - [ ] Sources declaradas (`_sources.yml`).
-- [ ] Capa staging (`stg_transactions`, `stg_complaints`) construida.
+- [ ] Capa staging (`stg_transactions`, `stg_complaints` con limpieza de fechas/booleanos) construida.
 - [ ] Capa intermediate (`int_account_activity`) con features de fraude (error de saldo, velocidad, drenaje de cuenta).
 - [ ] Mart `mart_fraud_features` materializado como tabla (~6.3M filas).
+- [ ] Mart `mart_fraud_complaints` particionado por mes + clustered, con `fraud_match_source`.
 - [ ] `dbt test` → todos PASS (genéricos + singular).
 - [ ] `dbt docs` y lineage visualizados.
 - [ ] `dbt build` corre completo.
@@ -562,6 +632,8 @@ Si todo está ✅ → **listo para el Manual 03: Orquestación con Airflow (Clou
 | Columnas no existen en `stg_complaints` | El CSV de CFPB tenía otros nombres | Revisa el esquema en la consola de BigQuery y ajusta el SELECT. |
 | `dbt docs serve` no abre | Puerto/Preview | Usa "Web Preview → port 8080"; o cambia `--port 8081`. |
 | Build lento | Window functions sobre 6.3M | Normal la primera vez; el mart queda como tabla y luego es rápido. |
+| `Too many partitions produced by query, allowed 4000` | Partición **diaria** sobre datos de varios años (CFPB) | Usa **partición mensual**: `granularity: 'month'` en el `config` (o `DATE_TRUNC(fecha, MONTH)` en SQL a mano). |
+| `mart_fraud_complaints` no queda particionada | Falta el bloque `{{ config(...) }}` o `date_received` no es DATE | Confirma el `config` con `partition_by`; asegúrate de que `stg_complaints` devuelve `date_received` como DATE (lo parsea con `safe.parse_date`). |
 
 ---
 
@@ -575,6 +647,9 @@ Si todo está ✅ → **listo para el Manual 03: Orquestación con Airflow (Clou
 - **`source()`:** referencia a una tabla cruda de entrada.
 - **Materialización:** `view` / `table` / `incremental`.
 - **Staging / intermediate / marts:** capas silver / lógica / gold.
+- **Partición (partitioning):** dividir una tabla por una columna (ej. fecha, mensual) para escanear menos datos → menos costo/latencia.
+- **Clustering:** ordenar físicamente por columnas (ej. `product/issue/state`) para acelerar filtros por esas columnas.
+- **`fraud_match_source`:** columna de trazabilidad; dice **dónde** se detectó la señal de fraude (narrativa, issue o product).
 - **Feature engineering:** crear variables predictivas (error de saldo, velocidad, drenaje).
 - **Test genérico vs singular:** YAML (`not_null`...) vs consulta SQL que falla si devuelve filas.
 - **Lineage:** grafo de dependencias entre modelos.

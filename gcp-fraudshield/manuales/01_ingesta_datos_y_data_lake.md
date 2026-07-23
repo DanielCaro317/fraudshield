@@ -652,6 +652,7 @@ Si todo está ✅ → **listo para el Manual 02: Transformación ELT con dbt (fe
 | "Not found: Dataset" al consultar | Región distinta entre bucket y dataset | Ambos deben estar en `us-central1`. |
 | `pct_fraude` da 0 | La etiqueta se llamó distinto | Revisa el SCHEMA de `transactions`; ajusta `is_fraud`. |
 | Cloud Shell "No space left" (camino CLI) | 5 GB llenos | Borra `.zip` y CSV crudos tras subir al lake. |
+| `Too many partitions produced by query, allowed 4000` | Intentaste particionar una tabla por fecha **diaria** con datos de varios años (típico si armas capas silver/gold a mano) | Usa **partición mensual** (`DATE_TRUNC(fecha, MONTH)`). En este proyecto las capas particionadas las construye **dbt** (Manual 02), no a mano. |
 
 ---
 
