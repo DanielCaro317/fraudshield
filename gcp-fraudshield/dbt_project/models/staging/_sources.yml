@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: fraud_raw
+    description: "Datos crudos cargados desde el Data Lake (Manual 01)."
+    schema: fraud_raw
+    tables:
+      - name: transactions
+        description: "Transacciones bancarias (PaySim). ~6.3M filas."
+      - name: complaints
+        description: "Quejas de clientes con narrativa (CFPB)."

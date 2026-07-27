@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: "Transacciones limpias y tipadas."
+    columns:
+      - name: amount
+        description: "Monto de la transacción."
+        tests:
+          - not_null
+      - name: is_fraud
+        description: "1 = fraude, 0 = legítima."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+              quote: false
+
+  - name: mart_fraud_features
+    description: "Tabla de features lista para el modelo de detección de fraude."
+    columns:
+      - name: is_fraud
+        description: "Etiqueta objetivo."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+              quote: false
+      - name: amount
+        tests:
+          - not_null
+      - name: transaction_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CASH_IN', 'CASH_OUT', 'DEBIT', 'PAYMENT', 'TRANSFER']

@@ -1,0 +1,21 @@
+name: 'fraudshield'
+version: '1.0.0'
+config-version: 2
+
+# Enlaza con el profile de ~/.dbt/profiles.yml
+profile: 'fraudshield'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+# Materialización por capa
+models:
+  fraudshield:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+
+
