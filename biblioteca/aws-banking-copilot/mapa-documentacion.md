@@ -81,8 +81,8 @@ Documentos (políticas/fraude, con metadata por fecha/producto/país)
 **🎯 Ruta de lectura (~2 días):** *Titan Text Embeddings* (~1 h) → *InvokeModel / Converse* para generar (~2 h) → concepto de chunking/overlap y similitud (lee el cap. de embeddings de *Hands-On LLMs*, ~3 h) → construye el pipeline mínimo y mide cómo cambia con chunk size/overlap.
 
 - 📘 **① Esencial:** [Titan Text Embeddings](https://docs.aws.amazon.com/bedrock/latest/userguide/titan-embedding-models.html) · [Inference con Converse](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html) · [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html)
-- 📚 *Hands-On Large Language Models* — Jay Alammar & Maarten Grootendorst · *AI Engineering* — Chip Huyen (RAG desde los fundamentos)
-- 📄 **Paper:** *[Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401)* — Lewis et al. (2020, el paper fundacional)
+- 📚 *Hands-On Large Language Models* — Jay Alammar & Maarten Grootendorst · *AI Engineering* — Chip Huyen (RAG desde los fundamentos) · *Natural Language Processing with Transformers* — Tunstall, von Werra & Wolf (equipo Hugging Face; embeddings y transformers por dentro — lo tienes ✅)
+- 📄 **Papers:** *[Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](https://arxiv.org/abs/2005.11401)* — Lewis et al. (2020, el fundacional de RAG) · *[Attention Is All You Need](https://arxiv.org/abs/1706.03762)* — Vaswani et al. (2017, el transformer — lo tienes en PDF ✅)
 - 🔀 **Variantes:** chunk size grande vs pequeño (contexto vs precisión); overlap sí/no; similitud coseno vs dot product; búsqueda **semántica vs keyword vs híbrida**. Ver también [GCP 5.1–5.2](../gcp-fraudshield/mapa-documentacion.md).
 
 ---
@@ -185,7 +185,7 @@ Documentos (políticas/fraude, con metadata por fecha/producto/país)
 
 - 📘 **① Esencial:** [AWS integrations — Docs by LangChain](https://docs.langchain.com/oss/python/integrations/providers/aws) · [`ChatBedrockConverse`](https://reference.langchain.com/python/langchain-aws/chat_models/bedrock_converse/ChatBedrockConverse) · [`AmazonKnowledgeBasesRetriever`](https://reference.langchain.com/python/langchain-community/retrievers/bedrock/AmazonKnowledgeBasesRetriever)
 - 📘 **② Referencia:** [langchain-aws (PyPI)](https://pypi.org/project/langchain-aws) · [LangSmith — docs](https://docs.langchain.com/langsmith/home)
-- 📚 *AI Engineering* — Chip Huyen
+- 📚 *AI Engineering* — Chip Huyen · *(opcional — on-ramp)* *Learning LangChain* — Oshin & Campos (Campos es mantenedor de LangChain; la **doc oficial manda por frescura** — lo tienes ✅)
 - 🔀 **Variantes:** **boto3 nativo vs LangChain** (control vs velocidad/portabilidad); LCEL vs código imperativo; LangSmith vs Langfuse (tracing).
 
 ---

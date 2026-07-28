@@ -203,7 +203,7 @@ Fuentes (PaySim/Kaggle + CFPB)
 - 📘 **① Esencial:** [Hugging Face PEFT](https://huggingface.co/docs/peft/index) · [TRL — SFTTrainer](https://huggingface.co/docs/trl/index) · [Ollama](https://github.com/ollama/ollama/tree/main/docs)
 - 📘 **② Referencia:** [LoRA en PEFT](https://huggingface.co/docs/peft/conceptual_guides/lora) · [Quantization (bitsandbytes)](https://huggingface.co/docs/transformers/quantization/bitsandbytes)
 - 📄 **Papers:** *[LoRA](https://arxiv.org/abs/2106.09685)* — Hu et al. · *[QLoRA](https://arxiv.org/abs/2305.14314)* — Dettmers et al.
-- 📚 *Hands-On Large Language Models* — Jay Alammar & Maarten Grootendorst
+- 📚 *Hands-On Large Language Models* — Jay Alammar & Maarten Grootendorst · *Natural Language Processing with Transformers* — Tunstall, von Werra & Wolf (equipo Hugging Face; **cap. de fine-tuning** — lo tienes ✅)
 - 🔀 **Variantes:** **RAG vs fine-tuning vs prompting** (el árbol de decisión clave); full FT vs LoRA vs QLoRA; ¿cuándo afinar aporta sobre RAG?
 
 ## 4.8 Metodología: CRISP-DM
@@ -223,8 +223,8 @@ Fuentes (PaySim/Kaggle + CFPB)
 
 - 📘 **① Esencial:** [ChromaDB — docs](https://docs.trychroma.com/) · [Vertex AI — Text embeddings](https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings)
 - 📘 **② Referencia:** [Vertex AI **Vector Search** (2.0 GA)](https://cloud.google.com/vertex-ai/docs/vector-search/overview) · [pgvector en Cloud SQL/AlloyDB](https://cloud.google.com/blog/products/databases/using-pgvector-llms-and-langchain-with-google-cloud-databases)
-- 📄 **Paper:** *[Efficient Estimation of Word Representations (word2vec)](https://arxiv.org/abs/1301.3781)* — Mikolov et al.
-- 📚 *Hands-On Large Language Models* — Alammar & Grootendorst (embeddings y búsqueda semántica)
+- 📄 **Papers:** *[Efficient Estimation of Word Representations (word2vec)](https://arxiv.org/abs/1301.3781)* — Mikolov et al. · *[Attention Is All You Need](https://arxiv.org/abs/1706.03762)* — Vaswani et al. (2017, el **transformer**: la base de embeddings y LLMs modernos — lo tienes en PDF ✅)
+- 📚 *Hands-On Large Language Models* — Alammar & Grootendorst (embeddings y búsqueda semántica) · *Natural Language Processing with Transformers* — Tunstall, von Werra & Wolf (HF; cómo funcionan de verdad transformers y embeddings — lo tienes ✅) · *(opcional — referencia profunda)* *Speech and Language Processing* — Jurafsky & Martin (3ª ed., gratis; lee solo el cap. **vector semantics / embeddings** — lo tienes ✅)
 - 🔀 **Variantes:** ChromaDB (local) vs **Vertex Vector Search** (gestionado) vs pgvector (SQL) vs FAISS; 🔁 AWS = **OpenSearch Serverless**; ¿ScaNN vs HNSW? estrategia de **chunking**.
 
 ## 5.2 RAG (Retrieval-Augmented Generation)
@@ -269,7 +269,7 @@ Fuentes (PaySim/Kaggle + CFPB)
 - 📘 **② Referencia:** [Graph API (state/nodes/edges)](https://docs.langchain.com/oss/python/langgraph/graph-api) · [Tool calling](https://docs.langchain.com/oss/python/langchain/tools) · [API reference](https://reference.langchain.com/python/langgraph/)
 - 📘 **③ Avanzada:** [Human-in-the-loop](https://docs.langchain.com/oss/python/langgraph/add-human-in-the-loop) · [Persistence / checkpointing](https://docs.langchain.com/oss/python/langgraph/persistence) · [Multi-agent](https://docs.langchain.com/oss/python/langgraph/multi-agent)
 - 📄 **Paper:** *[ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)* — Yao et al. (2022)
-- 📚 *AI Engineering* — Chip Huyen (capítulo de agentes)
+- 📚 *AI Engineering* — Chip Huyen (capítulo de agentes) · *(opcional — on-ramp)* *Learning LangChain* — Oshin & Campos (Campos es mantenedor de LangChain; útil como rampa, pero la **doc oficial manda por frescura** — lo tienes ✅)
 - 🎓 [LangChain Academy — Intro to LangGraph](https://academy.langchain.com/courses/intro-to-langgraph) (gratis)
 - 🔀 **Variantes:** grafo explícito (LangGraph) vs ReAct suelto vs workflow determinista; ¿cuándo un agente sí y cuándo basta una cadena? human-in-the-loop para aprobar el SAR.
 
