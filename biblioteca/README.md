@@ -72,6 +72,10 @@ No es una lista de enlaces: es un **mapa conectado**
 
 ---
 
+## 🧰 Método — plantillas ([`00_metodo/`](./00_metodo/))
+
+Las plantillas que operan las patas de *registrar decisiones* y *registrar errores* + la *evidencia de dominio*: [ficha de dominio](./00_metodo/plantilla-ficha-dominio.md), [registro de decisiones (ADR-lite)](./00_metodo/plantilla-registro-decisiones.md) y [bitácora de errores](./00_metodo/plantilla-registro-errores.md). Se copian a cada proyecto y se rellenan al construir.
+
 ## 🧭 Estrategia de estudio (léela antes de los mapas)
 
 [`estrategia-de-estudio.md`](./estrategia-de-estudio.md) — **cómo** recorrer la biblioteca: primero amplitud (construir todo end-to-end), luego profundidad **desde el núcleo IA-RAG hacia afuera** (diagrama de prioridad radial). El diagrama decide el *orden*; los mapas dan el *contenido*.
