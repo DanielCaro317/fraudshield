@@ -72,6 +72,10 @@ No es una lista de enlaces: es un **mapa conectado**
 
 ---
 
+## 🧭 Estrategia de estudio (léela antes de los mapas)
+
+[`estrategia-de-estudio.md`](./estrategia-de-estudio.md) — **cómo** recorrer la biblioteca: primero amplitud (construir todo end-to-end), luego profundidad **desde el núcleo IA-RAG hacia afuera** (diagrama de prioridad radial). El diagrama decide el *orden*; los mapas dan el *contenido*.
+
 ## 📂 Índice de mapas
 
 | Proyecto | Mapa de documentación | Estado |
