@@ -76,8 +76,8 @@ No es una lista de enlaces: es un **mapa conectado**
 
 | Proyecto | Mapa de documentación | Estado |
 |---|---|---|
-| **GCP — FraudShield** (datos + ML + RAG + agentes) | [`gcp-fraudshield/mapa-documentacion.md`](./gcp-fraudshield/mapa-documentacion.md) | 🟢 Piloto |
-| **AWS — Banking Copilot** (RAG/Bedrock/Guardrails) | `aws-banking-copilot/mapa-documentacion.md` | ⏳ Siguiente |
+| **GCP — FraudShield** (datos + ML + RAG + agentes) | [`gcp-fraudshield/mapa-documentacion.md`](./gcp-fraudshield/mapa-documentacion.md) | 🟢 Listo |
+| **AWS — Banking Copilot** (RAG/Bedrock/Guardrails) | [`aws-banking-copilot/mapa-documentacion.md`](./aws-banking-copilot/mapa-documentacion.md) | 🟢 Listo |
 
 ---
 
